@@ -1,0 +1,593 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://gohugo.io/" version="0.96.0">Hugo</generator><title>Speech on Shinetech Software</title><subtitle>Open Community Team Blog</subtitle><link href="https://blog.shinetechsoftware.org/tags/Speech/" rel="alternate" type="text/html" title="HTML"/><link href="https://blog.shinetechsoftware.org/tags/Speech/feed.xml" rel="self" type="application/atom+xml" title="Atom"/><updated>2022-04-01T07:46:46+00:00</updated><id>https://blog.shinetechsoftware.org/tags/Speech/</id><entry><title>关注软件开发中的安全</title><link href="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/" rel="alternate" type="text/html" hreflang="en"/><id>https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/</id><author><name>Lu Rongkai</name></author><published>2019-02-01T15:44:07+08:00</published><updated>2019-02-01T15:44:07+08:00</updated><content type="html">
+&lt;p>18 年 10 月底的时候，我在 Shinetech Software 内部做了一场在线的培训，主要关注的是在软件开发过程中，对于安全方面的工程实践，并不算是很深入的探讨，更多的是一些极不易察觉但又很常见的疏忽，这篇博客整理出来。&lt;/p>
+&lt;div class="gblog-toc gblog-toc__level--3">
+&lt;nav id="TableOfContents">
+&lt;ul>
+&lt;li>
+&lt;ul>
+&lt;li>&lt;a href="#一切漏洞都可以是注入漏洞">一切漏洞都可以是注入漏洞&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#不要相信来自用户的数据">不要相信来自用户的数据&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#不要相信外部第三方的数据">不要相信外部(第三方)的数据&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#也不要过于相信自己的数据">也不要过于相信自己的数据&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#一切非业务缺陷都是缺少检查">一切(非业务)缺陷都是缺少检查&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#前端检查">前端检查&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#后端验证">后端验证&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#复杂的业务状态检查利器状态机">复杂的业务状态检查利器:状态机&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#人的因素">人的因素&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#弱口令">弱口令&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#未验证的第三库引用">未验证的第三库引用&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#credentials-及源代码管理">credentials 及源代码管理&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#一定要做环境隔离">一定要做环境隔离!&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#在实践中">在实践中&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#最后">最后&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/nav>
+&lt;hr />
+&lt;/div>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h2 id="一切漏洞都可以是注入漏洞">
+一切漏洞都可以是注入漏洞
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#一切漏洞都可以是注入漏洞" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 一切漏洞都可以是注入漏洞" href="#%e4%b8%80%e5%88%87%e6%bc%8f%e6%b4%9e%e9%83%bd%e5%8f%af%e4%bb%a5%e6%98%af%e6%b3%a8%e5%85%a5%e6%bc%8f%e6%b4%9e">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h2>
+&lt;/div>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="不要相信来自用户的数据">
+不要相信来自用户的数据
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#不要相信来自用户的数据" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 不要相信来自用户的数据" href="#%e4%b8%8d%e8%a6%81%e7%9b%b8%e4%bf%a1%e6%9d%a5%e8%87%aa%e7%94%a8%e6%88%b7%e7%9a%84%e6%95%b0%e6%8d%ae">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;p>&lt;strong>e.g. SQL&lt;/strong>&lt;/p>
+&lt;p>如果我们碰到了如下一段代码片断，用于实现将用户通过 id 从数据库中查询出来，有经验的你一定知道有什么严重的问题：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-sql" data-lang="sql">&lt;span class="line">&lt;span class="cl">&lt;span class="n">var&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">id&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">ctx&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">query&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s1">&amp;#39;id&amp;#39;&lt;/span>&lt;span class="p">];&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="k">SELECT&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">FROM&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">USERS&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="k">WHERE&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">ID&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="n">id&lt;/span>&lt;span class="p">;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这段代码从用户的 http 请求中取出 id(查询字符串)，之后然后通过 sql 拼接生产一条合法的查询语句并执行，正常的请求可能是这样：&lt;/p>
+&lt;pre tabindex="0">&lt;code>GET /users?id=66721855
+[{
+&amp;#34;id&amp;#34;: 66721855,
+&amp;#34;name&amp;#34;: &amp;#34;lurongkai&amp;#34;,
+&amp;#34;addr&amp;#34;: &amp;#34;Tian Jin&amp;#34;
+}]
+&lt;/code>&lt;/pre>&lt;p>那么此时执行的是&lt;code>SELECT * FROM USERS WHERE ID = 66721855&lt;/code>，这没有问题，但是如果精心构造一个特殊的 query string 值呢？&lt;/p>
+&lt;pre tabindex="0">&lt;code>GET /users?id=1%20OR%201%3D1
+1%20OR%201%3D1 --(uri decode) -&amp;gt; 1 OR 1=1
+&lt;/code>&lt;/pre>&lt;p>这样，最后执行的 sql 就变成了&lt;code>SELECT * FROM USERS WHERE ID = 1 OR 1=1&lt;/code>，不解释了，典型的 sql 注入，一定留意。&lt;/p>
+&lt;blockquote>
+&lt;p>想像一下&lt;code>DELETE FROM POSTS WHERE ID = id&lt;/code>……&lt;/p>
+&lt;/blockquote>
+&lt;p>解决的方法其实很简单，大部分的驱动都是支持&lt;code>param&lt;/code>构造的，比如可以这么做：&lt;/p>
+&lt;pre tabindex="0">&lt;code>SELECT * FROM USERS WHERE ID = @ID
+conn.execute(sql, { ID: id });
+&lt;/code>&lt;/pre>&lt;blockquote>
+&lt;p>有同学会嘲笑，说这都 2019 年了，谁还在用 sql 拼接，我们都 ORM 甚至 nosql 了。别大意，有很多你想像不到的场景仍然在大量使用 sql 拼接，这是一块神奇土壤，而且 nosql 不见得一定安全，请看下一个例子。&lt;/p>
+&lt;/blockquote>
+&lt;p>&lt;strong>e.g. Mongo&lt;/strong>&lt;/p>
+&lt;p>假设我们有一个不规范的查询接口，使用了 POST 来查询 payments 数据，并在 body 中传递查询的条件：&lt;/p>
+&lt;pre tabindex="0">&lt;code>POST /payments
+{
+&amp;#34;f1&amp;#34;: 1
+}
+=&amp;gt;
+[{
+&amp;#34;id&amp;#34;: &amp;#34;5a69b8e0817870269d5fe82c&amp;#34;,
+&amp;#34;amount&amp;#34;: &amp;#34;100&amp;#34;,
+&amp;#34;f1&amp;#34;: 1,
+&amp;#34;createdAtUtc&amp;#34;: &amp;#34;2018-10-01T10:10:10.000&amp;#34;
+}]
+&lt;/code>&lt;/pre>&lt;p>返回的是通过给定的条件过滤后的数据。一般此类的接口会限定只能查询自身的数据，所以除非烂到无法拯救，通常是不会查询到其他用户的数据的。后端 api 的实现可能会是如此：&lt;/p>
+&lt;pre tabindex="0">&lt;code>var q = ctx.body;
+var query = { uid: uid, …q };
+db.collection[&amp;#39;payments&amp;#39;].find(q);
+&lt;/code>&lt;/pre>&lt;p>uid 来自 authentication/authorization 中间件。那么最终执行的 mongo 查询会是&lt;code>db.collection['payments'].find({ uid: 1 f1: 1 })&lt;/code>。接下来我们来构造特殊数据：&lt;/p>
+&lt;pre tabindex="0">&lt;code>/POST /payments
+{
+uid: {
+$ne: -1
+}
+}
+&lt;/code>&lt;/pre>&lt;p>执行起来会是&lt;code>db.collection['payments'].find({ uid: { $ne: -1 } })&lt;/code>，查到了所有用户的数据。&lt;/p>
+&lt;p>这其实不算是个好例子，js 的锅可能更大一些。我想在这里表达的是，mongo 的&lt;strong>操作符&lt;/strong>是存在注入风险的，要留意。&lt;/p>
+&lt;p>&lt;strong>e.g. XSS&lt;/strong>&lt;/p>
+&lt;p>跨站脚本注入非常常见，假设有以下接口:&lt;/p>
+&lt;pre tabindex="0">&lt;code>POST /blogs
+{
+&amp;#34;title&amp;#34;: &amp;#34;my blog&amp;#34;,
+&amp;#34;content&amp;#34;: &amp;#34;hello, shinetech&amp;#34;
+}
+&lt;/code>&lt;/pre>&lt;p>这个接口用来发布一篇博客，当前端开始展示该博客的时候，对应的可能是这样的代码:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-html" data-lang="html">&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">html&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">head&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> …
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">head&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">body&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">div&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;blog-body&amp;#34;&lt;/span> &lt;span class="na">class&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;container&amp;#34;&lt;/span>&lt;span class="p">&amp;gt;&amp;lt;/&lt;/span>&lt;span class="nt">div&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">body&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">script&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;template&amp;#34;&lt;/span> &lt;span class="na">type&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;x-tmpl-mustache&amp;#34;&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="o">&amp;lt;&lt;/span>&lt;span class="nx">section&lt;/span>&lt;span class="o">&amp;gt;&lt;/span>&lt;span class="p">{{{&lt;/span> &lt;span class="nx">body&lt;/span> &lt;span class="p">}}}&lt;/span>&lt;span class="o">&amp;lt;&lt;/span>&lt;span class="err">/section&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">script&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">script&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">$&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">get&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;/blogs/1&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kd">function&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">data&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">var&lt;/span> &lt;span class="nx">rendered&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">Mustache&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">render&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">template&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">data&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">$&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;#blog-body&amp;#34;&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nx">html&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">rendered&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">script&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">html&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>我们把逻辑剥离开，那么刚才那篇博客对应的 html 是:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-html" data-lang="html">&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">html&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">head&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> …
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">head&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">body&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">div&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;blog-body&amp;#34;&lt;/span> &lt;span class="na">class&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;container&amp;#34;&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">section&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>hello, shinetech&lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">section&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">div&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">body&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">html&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>接下来开始构造特殊数据：&lt;/p>
+&lt;pre tabindex="0">&lt;code>POST /blogs
+{
+&amp;#34;title&amp;#34;: &amp;#34;my blog&amp;#34;,
+&amp;#34;content&amp;#34;: &amp;#34;hello, shinetech
+&amp;lt;script&amp;gt;/* DO EVIL */&amp;lt;/script&amp;gt;&amp;#34;
+}
+&lt;/code>&lt;/pre>&lt;p>那么，渲染后的 html 是:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-html" data-lang="html">&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">html&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">head&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> …
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">head&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">body&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">div&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;blog-body&amp;#34;&lt;/span> &lt;span class="na">class&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;container&amp;#34;&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">section&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> hello, shinetech
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">script&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="cm">/* DO EVIL */&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">script&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">section&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">div&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">body&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">html&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>解决的办法也是比较简单，渲染的时候不要使用&lt;code>{% raw %}{{{}}}{% endraw %}&lt;/code>，而是使用&lt;code>{% raw %}{{}}{% endraw %}&lt;/code>就好了。&lt;/p>
+&lt;blockquote>
+&lt;p>这背后的逻辑其实是这样：mustache 不是个例，而是所有的前端页面的渲染都不应该相信用户的输入，都必需要做 encoding 或者危险标签剔除(这个很有难度)，如果嫌麻烦还可以使用 markdown，但不应该直接将用户的数据渲染出来。&lt;/p>
+&lt;/blockquote>
+&lt;p>最终处理后的 html 会变成:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-html" data-lang="html">&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">html&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">head&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> …
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">head&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">body&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">div&lt;/span> &lt;span class="na">id&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;blog-body&amp;#34;&lt;/span> &lt;span class="na">class&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;container&amp;#34;&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">section&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> hello, shinetech %3Cscript%3E%2F%2A+DO+EVIL+%2A%2F%3C%2Fscript%3E
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">section&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">div&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">body&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">html&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;strong>e.g. Bounds Checking&lt;/strong>&lt;/p>
+&lt;p>边界检查简直是重灾区，不少祸事都是因为没有做严格的边界检查造成的。&lt;/p>
+&lt;p>假设有一个用于转账的接口：&lt;/p>
+&lt;pre tabindex="0">&lt;code>POST /transfer
+{
+&amp;#34;trans&amp;#34;: [{
+&amp;#34;toUser&amp;#34;: &amp;#34;5a69b8f865bdcc26a2ca32ee&amp;#34;, // user a
+&amp;#34;amount&amp;#34;: 100
+}, {
+&amp;#34;toUser&amp;#34;: &amp;#34;5a69b8f865bdcc26a2ca32ef&amp;#34;, // user b
+&amp;#34;amount&amp;#34;: 200
+}]
+}
+&lt;/code>&lt;/pre>&lt;p>后端的实现是这样的（假设 js 是一门没有溢出检查的语言）：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="kr">async&lt;/span> &lt;span class="kd">function&lt;/span> &lt;span class="nx">processTransfer&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">model&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="nx">balance&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">getBalance&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="nx">total&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">_&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">sumBy&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">model&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">trans&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">t&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="nx">t&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">amount&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">//假定当前用户的余额是2000
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">total&lt;/span> &lt;span class="o">&amp;gt;&lt;/span> &lt;span class="nx">balance&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">throw&lt;/span> &lt;span class="k">new&lt;/span> &lt;span class="nb">Error&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;insufficient balance &amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// maybe in transaction
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="kr">await&lt;/span> &lt;span class="nx">withdraw&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">user&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">id&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">total&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kd">let&lt;/span> &lt;span class="nx">t&lt;/span> &lt;span class="k">of&lt;/span> &lt;span class="nx">model&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">trans&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">deposit&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">t&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">toUser&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">t&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">amount&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>如果在正常情况下，执行的结果应该是：&lt;/p>
+&lt;pre tabindex="0">&lt;code>Before:
+Self: = 2000
+User a: = 500
+User b: = 500
+After:
+Self: 2000 - ((100) + (200)) = 1700
+User a: 500 + (100) = 600
+User b: 500 + (200) = 700
+&lt;/code>&lt;/pre>&lt;p>接下来，开始构造特殊数据：&lt;/p>
+&lt;pre tabindex="0">&lt;code>POST /transfer
+{
+&amp;#34;trans&amp;#34;: [{
+&amp;#34;toUser&amp;#34;: &amp;#34;5a69b8f865bdcc26a2ca32ee&amp;#34;,
+&amp;#34;amount&amp;#34;: -100
+}, {
+&amp;#34;toUser&amp;#34;: &amp;#34;5a69b8f865bdcc26a2ca32ef&amp;#34;,
+&amp;#34;amount&amp;#34;: 200
+}]
+}
+&lt;/code>&lt;/pre>&lt;p>于是，结果变为:&lt;/p>
+&lt;pre tabindex="0">&lt;code>Before:
+Self: = 2000
+User a: = 500
+User b: = 500
+After:
+Self: 2000 - ((-100) + (200)) = 1900
+User a: 500 + (—100) = 400
+User b: 500 + (200) = 700
+&lt;/code>&lt;/pre>&lt;p>再比如：&lt;/p>
+&lt;pre tabindex="0">&lt;code>POST /transfer
+{
+&amp;#34;trans&amp;#34;: [{
+&amp;#34;toUser&amp;#34;: &amp;#34;5a69b8f865bdcc26a2ca32ee&amp;#34;,
+&amp;#34;amount&amp;#34;: 2147483647
+}, {
+&amp;#34;toUser&amp;#34;: &amp;#34;5a69b8f865bdcc26a2ca32ef&amp;#34;,
+&amp;#34;amount&amp;#34;: 1
+}]
+}
+&lt;/code>&lt;/pre>&lt;p>结果会变成：&lt;/p>
+&lt;pre tabindex="0">&lt;code>Before:
+Self: = 2000
+User a: = 500
+User b: = 500
+After:
+Self: 2000 - ((2147483647) + (1)) = -2147481648
+User a: 500 + (2147483647) = -2147483149
+User b: 500 + (1) = 501
+&lt;/code>&lt;/pre>&lt;p>第一段数据显示，业务逻辑没有针对负值进行处理，第二段说明没有处理溢出的情况。&lt;/p>
+&lt;p>为什么会溢出？&lt;/p>
+&lt;p>32 位整型的最大值为&lt;code>2^31-1 2147483647&lt;/code>，最小值为&lt;code>-2^31 -2147483648&lt;/code>，我们举例说明&lt;code>Int32.MaxValue + 1&lt;/code>的计算过程:&lt;/p>
+&lt;pre tabindex="0">&lt;code>原码:
+0_1111111111111111111111111111111
++ 0_0000000000000000000000000000001
+= 1_0000000000000000000000000000000
+&lt;/code>&lt;/pre>&lt;p>之后对结果（补码）转换为原码：&lt;/p>
+&lt;pre tabindex="0">&lt;code>补 -&amp;gt; 原(后31位取反加1)
+= 1_10000000000000000000000000000000
+= - 2^31 = -2147483648
+&lt;/code>&lt;/pre>&lt;p>再举个&lt;code>2147483647 + (-2147483648) = -1&lt;/code>的例子：&lt;/p>
+&lt;pre tabindex="0">&lt;code>运算时:
+0_1111111111111111111111111111111
++ 1_0000000000000000000000000000000（内存中，负数都是补码表示）
+= 1_1111111111111111111111111111111
+补 -&amp;gt; 原:
+1_0000000000000000000000000000001
+- 1
+&lt;/code>&lt;/pre>&lt;p>所幸，现在的编程语言大多对溢出有了很好的控制，例如会抛出异常，但是针对边界检查上仍然需要留意。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="不要相信外部第三方的数据">
+不要相信外部(第三方)的数据
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#不要相信外部第三方的数据" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 不要相信外部(第三方)的数据" href="#%e4%b8%8d%e8%a6%81%e7%9b%b8%e4%bf%a1%e5%a4%96%e9%83%a8%e7%ac%ac%e4%b8%89%e6%96%b9%e7%9a%84%e6%95%b0%e6%8d%ae">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;p>&lt;strong>e.g. 微信支付&lt;/strong>&lt;/p>
+&lt;p>一般的流程是：&lt;/p>
+&lt;ol>
+&lt;li>web|app: GET /wx/params 获取支付参数&lt;/li>
+&lt;li>web: (jsapi) 跳转到微信支付页面, app: (唤起微信)&lt;/li>
+&lt;li>用户在页面或者 app 完成支付并跳回 web|app&lt;/li>
+&lt;li>服务端等待微信服务器的回调，并完成对应业务&lt;/li>
+&lt;li>web|app 拉取最新数据&lt;/li>
+&lt;/ol>
+&lt;p>通常的实现为:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// 微信支付回调接口
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="nx">router&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">post&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;/wx/cb&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kr">async&lt;/span> &lt;span class="kd">function&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="nx">rc&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">ctx&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">request&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">body&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">return_code&lt;/span> &lt;span class="o">||&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span> &lt;span class="o">===&lt;/span> &lt;span class="s2">&amp;#34;SUCCESS&amp;#34;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="nx">rm&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">ctx&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">request&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">body&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">return_msg&lt;/span> &lt;span class="o">||&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span> &lt;span class="o">===&lt;/span> &lt;span class="s2">&amp;#34;OK&amp;#34;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">!&lt;/span>&lt;span class="nx">rc&lt;/span> &lt;span class="o">||&lt;/span> &lt;span class="o">!&lt;/span>&lt;span class="nx">rm&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 支付失败的业务逻辑，并回复微信服务器
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nx">ctx&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">body&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">xml&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="sb">`
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb">&amp;lt;xml&amp;gt;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> &amp;lt;return_code&amp;gt;&amp;lt;![CDATA[SUCCESS]]&amp;gt;&amp;lt;/return_code&amp;gt;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb"> &amp;lt;return_msg&amp;gt;&amp;lt;![CDATA[OK]]&amp;gt;&amp;lt;/return_msg&amp;gt;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb">&amp;lt;/xml&amp;gt;100
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="sb">`&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 更新数据状态 &amp;amp; 更新订单或者其它业务
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>那么我们看看，发现支付的回调接口没有验证来源，其实是可以伪造支持通知请求：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">curl &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -H &lt;span class="s2">&amp;#34;Content-Type:application/json&amp;#34;&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -X POST &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --data &lt;span class="s1">&amp;#39;{ \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1"> &amp;#34;return_code&amp;#34;: &amp;#34;SUCCESS&amp;#34;, \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1"> &amp;#34;return_msg&amp;#34;: &amp;#34;OK&amp;#34;, \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1"> &amp;#34;appid: &amp;#34;&amp;#34;, \ // 可从params里取得
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1"> &amp;#34;mch_id: &amp;#34;&amp;#34;, \ // 可从params里取得
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1"> &amp;#34;nonce_str: &amp;#34;&amp;#34;, \ // 可从params里取得
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1"> &amp;#34;sign: &amp;#34;&amp;#34;, \ // 伪造
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1"> &amp;#34;openid&amp;#34;: &amp;#34;&amp;#34;, \ // 可从params里取得
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1"> &amp;#34;trade_type: &amp;#34;&amp;#34;, \ // JSAPI、NATIVE、APP
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1"> &amp;#34;bank_type: &amp;#34;CMB_CREDIT&amp;#34;, \ // 伪造
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1"> &amp;#34;total_fee: 100, \ // 可从params里取得
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1"> &amp;#34;transaction_id: &amp;#34;wx2018100110101082741&amp;#34;, \ // 伪造
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1"> &amp;#34;out_trade_no: &amp;#34;&amp;#34;, \ // 可从params里取得
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1"> &amp;#34;time_end: &amp;#34;20181001101010&amp;#34; \
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1"> }&amp;#39;&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> http://demo.api.com/wx/cb
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>对于回调类，尤其是第三方的数据来源，一定要做身份或合法性验证。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="也不要过于相信自己的数据">
+也不要过于相信自己的数据
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#也不要过于相信自己的数据" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 也不要过于相信自己的数据" href="#%e4%b9%9f%e4%b8%8d%e8%a6%81%e8%bf%87%e4%ba%8e%e7%9b%b8%e4%bf%a1%e8%87%aa%e5%b7%b1%e7%9a%84%e6%95%b0%e6%8d%ae">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;p>&lt;strong>e.g. 运营商劫持&lt;/strong>&lt;/p>
+&lt;p>很多只使用&lt;code>http&lt;/code>协议的 app 会经常发现页面上有很多第三方的广告或&lt;code>widget&lt;/code>这是由于运营商的动态注入造成的。&lt;/p>
+&lt;img src="/photos/2019-01-15-shinetech-2018-security-training-summary/op_hijack1.png" width="300px">
+&lt;img src="/photos/2019-01-15-shinetech-2018-security-training-summary/op_hijack2.png" width="300px">
+&lt;p>这些 http 流量在运营商看来就是透明的，所以为了防微杜渐，干脆全走&lt;code>https&lt;/code>更加简单。&lt;/p>
+&lt;p>&lt;strong>e.g. 双向验证&lt;/strong>&lt;/p>
+&lt;p>启用&lt;code>https&lt;/code>后事情还没有结束，有可能还会涉及到中间人攻击问题，尤其是 app 的后端 api，传统的过程是这样:&lt;/p>
+&lt;pre tabindex="0">&lt;code>Browser &amp;lt;------- HTTPS -------&amp;gt; Server
+&lt;/code>&lt;/pre>&lt;p>被中间人攻击后就变成：&lt;/p>
+&lt;pre tabindex="0">&lt;code>Browser &amp;lt;-------HTTPS -------&amp;gt; (Attacker)
+|
+| // 证书替换?
+|
+Server &amp;lt;------- HTTPS -------&amp;gt; (Attacker)
+&lt;/code>&lt;/pre>&lt;p>解决的办法倒也是简单，直接将公钥打包在 app 中，通讯时强制检查公私钥就行，会安全许多。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h2 id="一切非业务缺陷都是缺少检查">
+一切(非业务)缺陷都是缺少检查
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#一切非业务缺陷都是缺少检查" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 一切(非业务)缺陷都是缺少检查" href="#%e4%b8%80%e5%88%87%e9%9d%9e%e4%b8%9a%e5%8a%a1%e7%bc%ba%e9%99%b7%e9%83%bd%e6%98%af%e7%bc%ba%e5%b0%91%e6%a3%80%e6%9f%a5">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h2>
+&lt;/div>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="前端检查">
+前端检查
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#前端检查" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 前端检查" href="#%e5%89%8d%e7%ab%af%e6%a3%80%e6%9f%a5">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;p>前端页面的检查是很有必要的，除了能改善用户体验，还能部分避免后端脆弱所造成的严重问题。但是不能只依靠前端的检查，如果前端/后端的检查有个比重的话，我可能会给出&lt;code>1:9&lt;/code>这么毫不夸张的比例：&lt;/p>
+&lt;ul>
+&lt;li>input required?&lt;/li>
+&lt;li>input type?&lt;/li>
+&lt;li>input format? email, phone, number precision/max/min&lt;/li>
+&lt;li>password complexity?&lt;/li>
+&lt;li>input dependencies?&lt;/li>
+&lt;li>date format?&lt;/li>
+&lt;li>timezone convert?&lt;/li>
+&lt;li>&amp;hellip;&lt;/li>
+&lt;/ul>
+&lt;p>如果忽略这些&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="后端验证">
+后端验证
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#后端验证" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 后端验证" href="#%e5%90%8e%e7%ab%af%e9%aa%8c%e8%af%81">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;p>当数据是从用户端产生并提交到服务端时，需要做很多的合法性检查，因为你无法盲目的去相信用户数据：&lt;/p>
+&lt;ul>
+&lt;li>illegal fields cleaning&lt;/li>
+&lt;li>format checking&lt;/li>
+&lt;li>required/dependencies checking&lt;/li>
+&lt;li>range/bounds checking&lt;/li>
+&lt;li>signature/certification verifying&lt;/li>
+&lt;li>anti-forgery token checking(防止重放)&lt;/li>
+&lt;li>business logic precondition checking&lt;/li>
+&lt;li>&amp;hellip;&lt;/li>
+&lt;/ul>
+&lt;p>能做到这些，就能避免很大一部分的逻辑缺陷和试探。&lt;/p>
+&lt;p>&lt;strong>e.g. asp.net core mvc&lt;/strong>&lt;/p>
+&lt;p>一个良好实现后端检查的例子（使用 C#语言）&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-csharp" data-lang="csharp">&lt;span class="line">&lt;span class="cl">&lt;span class="k">public&lt;/span> &lt;span class="k">class&lt;/span> &lt;span class="nc">BookInputModel&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na"> [Required]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">public&lt;/span> &lt;span class="kt">string&lt;/span> &lt;span class="n">Title&lt;/span> &lt;span class="p">{&lt;/span> &lt;span class="k">get&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="k">private&lt;/span> &lt;span class="k">set&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na"> [Required]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na"> [RegularExpression(@&amp;#34;^\d{3}-\d-\d{3,4}-\d{4,5}-\d$&amp;#34;)]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">public&lt;/span> &lt;span class="kt">string&lt;/span> &lt;span class="n">Isbn&lt;/span> &lt;span class="p">{&lt;/span> &lt;span class="k">get&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="k">private&lt;/span> &lt;span class="k">set&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na"> [Required]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na"> [Range(0, 1000)]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">public&lt;/span> &lt;span class="kt">int&lt;/span> &lt;span class="n">Price&lt;/span> &lt;span class="p">{&lt;/span> &lt;span class="k">get&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="k">private&lt;/span> &lt;span class="k">set&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na">[Route(&amp;#34;api/books&amp;#34;)]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na">[ApiController]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na">[AutoValidateAntiforgeryToken]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">public&lt;/span> &lt;span class="k">class&lt;/span> &lt;span class="nc">BooksController&lt;/span> &lt;span class="p">:&lt;/span> &lt;span class="n">ControllerBase&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na"> [HttpPost]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na"> [Route(&amp;#34;&amp;#34;)]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">public&lt;/span> &lt;span class="k">async&lt;/span> &lt;span class="n">Task&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="n">IActionResult&lt;/span>&lt;span class="p">&amp;gt;&lt;/span> &lt;span class="n">Post&lt;/span>&lt;span class="p">([&lt;/span>&lt;span class="n">FromBody&lt;/span>&lt;span class="p">]&lt;/span>&lt;span class="n">BookInputModel&lt;/span> &lt;span class="n">model&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(!&lt;/span>&lt;span class="n">ModelState&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">IsValid&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">BadRequest&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;book data invalid&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="k">await&lt;/span> &lt;span class="m">_&lt;/span>&lt;span class="n">bookRepository&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">HasByIsbn&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">model&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Isbn&lt;/span>&lt;span class="p">))&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">BadRequest&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;the specified book already exists&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">var&lt;/span> &lt;span class="n">serviceDto&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="n">Mapper&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Map&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="n">Book&lt;/span>&lt;span class="p">&amp;gt;(&lt;/span>&lt;span class="n">model&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="c1">// 数据清洗&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">var&lt;/span> &lt;span class="n">book&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="k">await&lt;/span> &lt;span class="m">_&lt;/span>&lt;span class="n">bookService&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Create&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">serviceDto&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">var&lt;/span> &lt;span class="n">bookDisplayModel&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="n">Mapper&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Map&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="n">BookDisplayModel&lt;/span>&lt;span class="p">&amp;gt;(&lt;/span>&lt;span class="n">book&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="c1">// 数据清洗&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">CreatedAtAction&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;Get&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">bookDisplayModel&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na"> [HttpGet]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na"> [Route(&amp;#34;{id}&amp;#34;)]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">public&lt;/span> &lt;span class="k">async&lt;/span> &lt;span class="n">Task&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="n">IActionResult&lt;/span>&lt;span class="p">&amp;gt;&lt;/span> &lt;span class="n">Get&lt;/span>&lt;span class="p">([&lt;/span>&lt;span class="n">FromRoute&lt;/span>&lt;span class="p">]&lt;/span>&lt;span class="kt">string&lt;/span> &lt;span class="n">id&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">var&lt;/span> &lt;span class="n">book&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="k">await&lt;/span> &lt;span class="m">_&lt;/span>&lt;span class="n">bookRepository&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Find&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">id&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="k">null&lt;/span> &lt;span class="p">==&lt;/span> &lt;span class="n">book&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">NotFound&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">Ok&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">Mapper&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Map&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="n">BookDisplayModel&lt;/span>&lt;span class="p">&amp;gt;(&lt;/span>&lt;span class="n">book&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="复杂的业务状态检查利器状态机">
+复杂的业务状态检查利器:状态机
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#复杂的业务状态检查利器状态机" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 复杂的业务状态检查利器:状态机" href="#%e5%a4%8d%e6%9d%82%e7%9a%84%e4%b8%9a%e5%8a%a1%e7%8a%b6%e6%80%81%e6%a3%80%e6%9f%a5%e5%88%a9%e5%99%a8%e7%8a%b6%e6%80%81%e6%9c%ba">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;p>如果我来推荐的话，对于复杂一些的业务，推荐使用状态机建模，避免自顶向下一条龙式的实现，极易出错而且还不易排查和文档化。&lt;/p>
+&lt;p>一个假想的例子是这样的：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="nx">router&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">put&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;/some/business&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kr">async&lt;/span> &lt;span class="kd">function&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="nx">input&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">ctx&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">request&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">body&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">!&lt;/span>&lt;span class="nx">isValid&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">input&lt;/span>&lt;span class="p">))&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">throw&lt;/span> &lt;span class="k">new&lt;/span> &lt;span class="nb">Error&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;input invalid&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="nx">stateInput&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">parseRaw&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">input&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="nx">state&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kr">await&lt;/span> &lt;span class="nx">loadState&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">stateInput&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="nx">expected&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kr">await&lt;/span> &lt;span class="nx">decideNext&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">input&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">action&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">!&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kr">await&lt;/span> &lt;span class="nx">state&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">canProcess&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">expected&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">input&lt;/span>&lt;span class="p">)))&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">throw&lt;/span> &lt;span class="k">new&lt;/span> &lt;span class="nb">Error&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;business checking failed, forbidden&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">state&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">goNext&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">expected&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">input&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">await&lt;/span> &lt;span class="nx">saveState&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">state&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="nx">ss&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">state&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">snapshot&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="nx">mapper&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="k">new&lt;/span> &lt;span class="nx">Mapper&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="nx">res&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">mapper&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">mapTo&lt;/span>&lt;span class="p">({&lt;/span> &lt;span class="nx">ns&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s2">&amp;#34;some/business&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">data&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">ss&lt;/span> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ctx&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">body&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>当然，并不存在这样一种现成的框架，但是如果有精力，我可能会去做这么一个基础模块出来，但是背后的理念是通用的。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h2 id="人的因素">
+人的因素
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#人的因素" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 人的因素" href="#%e4%ba%ba%e7%9a%84%e5%9b%a0%e7%b4%a0">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h2>
+&lt;/div>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="弱口令">
+弱口令
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#弱口令" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 弱口令" href="#%e5%bc%b1%e5%8f%a3%e4%bb%a4">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;p>有没有见过下面这些眼熟的密码？&lt;/p>
+&lt;pre tabindex="0">&lt;code>12345678
+1234567890
+111111
+aaaaaa
+1qaz2wsx#EDC
+admin
+hello2018
+[name]112233
+[phone]
+&lt;/code>&lt;/pre>&lt;p>建议还是花一些时间，对内部使用的密码例如数据库连接密码等集中做一次审计，避免因弱口令造成的事故。如果有能力的话，同时建议定期更换密码，并限制到极少数人知道或者通过安全的硬件保存。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="未验证的第三库引用">
+未验证的第三库引用
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#未验证的第三库引用" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 未验证的第三库引用" href="#%e6%9c%aa%e9%aa%8c%e8%af%81%e7%9a%84%e7%ac%ac%e4%b8%89%e5%ba%93%e5%bc%95%e7%94%a8">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;p>一些关于引用第三库的小 tips：&lt;/p>
+&lt;ul>
+&lt;li>Open Source 库可能更安全一些&lt;/li>
+&lt;li>下载二进制包时，注意和官方的 gpg 签名做对比(有良心的都提供)&lt;/li>
+&lt;li>去官方下载，不要去 xx 网盘，宁肯使用有节操的镜像节点&lt;/li>
+&lt;li>在使用 npm, maven, nuget 等 registry 时，如果下载的是小众包，那么仍然需要慎重，你看到的代码不代表是包中使用的代码，不放心请手动 build&lt;/li>
+&lt;li>使用互操作时，请更加留意底层的原生库，一个不留神，反手就是一个缓冲区溢出，尽量避免 Interop&lt;/li>
+&lt;li>docker 镜像请使用官方出品，小众镜像请手动 docker build(这事儿爆过很严重的事件: ref-&amp;gt; docker123321)&lt;/li>
+&lt;/ul>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="credentials-及源代码管理">
+credentials 及源代码管理
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#credentials-及源代码管理" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor credentials 及源代码管理" href="#credentials-%e5%8f%8a%e6%ba%90%e4%bb%a3%e7%a0%81%e7%ae%a1%e7%90%86">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;p>一些关于凭证和 SCM 的小 tips：&lt;/p>
+&lt;ul>
+&lt;li>不要以明文存密码，使用 hash，必要时还可以加 salt&lt;/li>
+&lt;li>CI/CD 上使用的凭证要注意隐藏，否则会在 build 日志中看到，例如使用 Jenkins 的凭证管理&lt;/li>
+&lt;li>调用第三方 api 的凭证不要直接放在源代码中，环境变量是一种选项，或者更好的配置管理方式&lt;/li>
+&lt;li>目前 github 会帮你扫描是否有敏感信息签入代码库，但是仍然需要留意，避免出现第二个&amp;quot;华住&amp;quot;&lt;/li>
+&lt;li>不要轻易把私有仓库变成公有仓库，你并不是很清楚提交历史里有什么敏感信息，有必要的话清除历史并检查后新开仓库&lt;/li>
+&lt;li>保护好企业的自动化工具，提升工具的安全性，例如保护好 Jenkins，保护好内部 npm、maven、nuget&lt;/li>
+&lt;/ul>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="一定要做环境隔离">
+一定要做环境隔离!
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#一定要做环境隔离" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 一定要做环境隔离!" href="#%e4%b8%80%e5%ae%9a%e8%a6%81%e5%81%9a%e7%8e%af%e5%a2%83%e9%9a%94%e7%a6%bb">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;p>一些其它的 tips：&lt;/p>
+&lt;ul>
+&lt;li>生产、测试、开发，不同环境应该使用的所有凭证都不相同&lt;/li>
+&lt;li>JWT 签发 token 一定留意 Audience，子站 A 签发的 token 不见得是给子站 B 用的&lt;/li>
+&lt;li>不同的环境使用不同的 JWT Signing Key，这是信仰&lt;/li>
+&lt;li>除非不得已，不同的环境间应该完全阻止互通，防止跳板攻击&lt;/li>
+&lt;li>生产应该只有极少数人可以操作，尽量避免开发人员操作&lt;/li>
+&lt;li>不要在生产环境上调试错误，除非根本没在代码中做日志&lt;/li>
+&lt;li>不要在生产上安装各种无用的东西，比如安个 360 浏览器…再比如安个不知名的根证书，脆弱就是一瞬间&lt;/li>
+&lt;li>必要时，连 source-map 都不要暴露在生产上，dbg 符号文件更不能泄露，否则和泄露代码一样&lt;/li>
+&lt;/ul>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h2 id="在实践中">
+在实践中
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#在实践中" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 在实践中" href="#%e5%9c%a8%e5%ae%9e%e8%b7%b5%e4%b8%ad">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h2>
+&lt;/div>
+&lt;p>一些在实践中的小 tips：&lt;/p>
+&lt;ul>
+&lt;li>慎重选择加密方式，必要的话请使用高强度的非对称加密，并妥善保存私钥
+代码中的写的日志一定要定期的梳理，不要把敏感信息(例如用户密码)写到日志中(github 自己出过这问题)&lt;/li>
+&lt;li>定期升级依赖库，虽然有可能会有 bug，但是和安全比起来，仍然值得投入
+类似 HeartBleed 的漏洞不是普通开发者能避免的，我们能做的就是第一时间升级，然后做好自己的安全&lt;/li>
+&lt;li>开发时，时刻进行人格分裂，站在攻击者的角度，思考一下可能会如何攻击&lt;/li>
+&lt;/ul>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h2 id="最后">
+最后
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/02/software-security-concerns/#最后" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 最后" href="#%e6%9c%80%e5%90%8e">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h2>
+&lt;/div>
+&lt;p>需要强调两点：&lt;/p>
+&lt;ul>
+&lt;li>安全投资是很昂贵的，我们能做的只能是尽量从开发层面降低伤害&lt;/li>
+&lt;li>开发环节、运维环节、基础设施，任何一层都有可能会出现问题&lt;/li>
+&lt;/ul>
+&lt;p>强烈建议！使用容器或虚拟化技术。&lt;/p>
+&lt;blockquote>
+&lt;p>安全遵循木桶理论，缺一块儿都会降低整体可用性&lt;/p>
+&lt;/blockquote></content><category scheme="https://blog.shinetechsoftware.org/authors/lurongkai" term="lurongkai" label="lurongkai"/><category scheme="https://blog.shinetechsoftware.org/tags/Software-Security" term="Software-Security" label="Software Security"/><category scheme="https://blog.shinetechsoftware.org/tags/Speech" term="Speech" label="Speech"/></entry></feed>
