@@ -1,74 +1,114 @@
 baseURL = 'https://blog.shinetechsoftware.org/'
 languageCode = 'en-us'
-defaultContentLanguage = "en"
-title = 'Blog'
-theme = "cayman"
+title = 'Shinetech Software'
+theme = "geekblog"
 
-# Google analytics
-# googleAnalytics = "UA-123456789-1"
-
-# Disqus comments
 disqusShortname = "shinetech-software-blog"
 
-# Syntax highlighting
-pygmentsCodefences = true
-pygmentsStyle = "pygments"
+paginate = 10
+pluralizeListTitles = false
+
+# Required to get well formatted code blocks
+pygmentsUseClasses = true
+pygmentsCodeFences = true
+disablePathToLower = true
+# enableGitInfo = true
+
+# Required if you want to render robots.txt template
+enableRobotsTXT = true
+
+[markup]
+  [markup.goldmark.renderer]
+    unsafe = true
+  [markup.tableOfContents]
+    startLevel = 1
+    endLevel = 3
 
 [taxonomies]
+  author = "authors"
   tag = "tags"
 
-[permalinks]
-  post = "/:year/:month/:filename/"
+[mediaTypes]
+  [mediaTypes."application/atom+xml"]
+    suffixes = ["xml"]
+
+[outputFormats]
+  [outputFormats.Atom]
+    name = "Atom"
+    mediaType = "application/atom+xml"
+    baseName = "feed"
+    isPlainText = false
+    rel = "alternate"
+    isHTML = false
+    noUgly = true
+    permalinkable = false
+
+[outputs]
+  home = ["HTML", "ATOM"]
+  page = ["HTML"]
+  section = ["HTML"]
+  taxonomy = ["HTML"]
+  term = ["HTML", "ATOM"]
 
 [params]
-  project_name = "Shinetech Software"
-  project_tagline = "Open Community Team Blog"
-  dateFormat = "2006-01-02"
+  subtitle = "Team Blog"
+  description = "Shinetech Software Open Community Team Blog"
+  keywords = ["shinetech software", "open community", "team blog"]
+  images = []
 
-  # Footer text, can be markdown
-  footer = "* [GitHub](https://github.com/shinetechopen)\n * [Shinetech Software](https://www.shinetechsoftware.com/)"
+  # (Optional, default static/brand.svg) Set the path to a logo for the Geekblog
+  # relative to your 'static/' folder.
+  logo = "shinetech.svg"
 
-  # If true, the CSS/JS for Katex math typesetting are enabled
-  katex = true
+  # (Optional, default 6) Set how many table of contents levels to be showed on page.
+  # Use false to hide ToC, note that 0 will default to 6 (https://gohugo.io/functions/default/)
+  # You can also specify this parameter per page in front matter.
+  geekblogToC = 3
 
-  # Breakpoints
-  large_breakpoint = "64em"
-  medium_breakpoint = "42em"
+  # (Optional, default none) Add a link to your Legal Notice page to the site footer.
+  # It can be either a remote url or a local file path relative to your content directory.
+#   geekblogLegalNotice = "https://blog.example.com/legal"
 
-  # Header colors
-  header_heading_color = "#fff"
-  header_background_color = "#159957"
-  header_background_color_secondary = "#155799"
+  # (Optional, default none) Add a link to your Privacy Policy page to the site footer.
+  # It can be either a remote url or a local file path relative to your content directory.
+#   geekblogPrivacyPolicy = "/privacy"
 
-  # Text colors
-  section_headings_color = "#159957"
-  body_text_color = "#606c71"
-  body_link_color = "#1e6bb8"
-  blockquote_text_color = "#819198"
+  # (Optional, default true) Add an anchor link to headlines.
+  geekblogAnchor = true
 
-  # Code colors
-  code_background_color = "#f3f6fa"
-  code_text_color = "#567482"
+  # (Optional, default none) Sites main author.
+  geekblogAuthor = "Shinetech Software Inc."
 
-  # Border colors
-  border_color = "#dce6f0"
-  table_border_color = "#e9ebec"
-  hr_border_color = "#eff0f1"
+  # (Optional, default posts) Set the name of the default content section.
+#   geekblogContentSection = "posts"
 
-[menu]
-  [[menu.nav]]
-    name = "Blog"
-    url = "/"
-    weight = 1
-  [[menu.nav]]
-    name = "Tags"
-    url = "/tags/"
-    weight = 2
-  [[menu.nav]]
-    name = "GitHub"
-    url = "https://github.com/shinetechopen"
-    weight = 3
-  [[menu.nav]]
-    name = "RSS"
-    url = "/index.xml"
-    weight = 4
+  # (Optional, default true) Enable or disable image lazy loading for images rendered
+  # by the 'img' shortcode.
+  geekblogImageLazyLoading = true
+
+  # (Optional, default false) Set HTMl <base> to .Site.BaseURL if enabled. It might be required
+  # if a subdirectory is used within Hugo's BaseURL.
+  # See https://developer.mozilla.org/de/docs/Web/HTML/Element/base.
+  geekblogOverwriteHTMLBase = false
+
+  # (Optional, default true) Enable or disable adding tags automatically to the main menu.
+  geekblogTagsToMenu = true
+
+  # (Optional, default false) Auto-decrease brightness of images and add a slightly grayscale to avoid
+  # bright spots while using the dark mode.
+  geekblogDarkModeDim = false
+
+  # (Optional, default true) Display a "Back to top" link in the site footer.
+  geekblogBackToTop = true
+
+  # (Optional, default none) Adds a "Hosted on <provider>" line to the footer.
+  # Could be used if you want to give credits to your hosting provider.
+#   [params.geekblogHostedOn]
+#     name = "Uberspace"
+#     link = "https://uberspace.de/en/"
+
+  # (Optional, default none) Adds a "Content licensed under <license>" line to the footer.
+  # Could be used if you want to define a default license for your content.
+  [params.geekblogContentLicense]
+    name = "CC BY-SA 4.0"
+    link = "https://creativecommons.org/licenses/by-sa/4.0/"

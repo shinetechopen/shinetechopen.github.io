@@ -2,15 +2,13 @@
 title: "Demo Post"
 date: 2022-04-01T09:39:48+08:00
 draft: true
-geekblogToC: 3
-geekblogAnchor: false
 # tags:
 #     - demo
 # authors:
 #     - lurongkai
 # weight: 1
 ---
-
+{{< toc >}}
 
 this is an demo post
 
@@ -40,3 +38,5 @@ If you need more flexibility for your embedded images, you could use the img sho
 # Icon Sets
 
 [https://hugo-geekblog.geekdocs.de/posts/features/icon-sets/]()
+
+{{< icon "shinetech" >}}
