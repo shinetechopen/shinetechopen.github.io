@@ -55,7 +55,8 @@
               {{ end }}"
               href="{{ .RelPermalink }}"
             >
-              {{ partial "utils/title" . }}
+              {{ $name }}
+              <!-- {{ partial "utils/title" . }} -->
             </a>
           </li>
         {{ end }}

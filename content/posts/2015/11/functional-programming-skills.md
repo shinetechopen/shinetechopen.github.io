@@ -5,6 +5,8 @@ draft: false
 geekblogAnchor: false
 tags:
     - Functional Programing
+    - FSharp
+    - JavaScript
 authors:
     - lurongkai
 # weight: 1

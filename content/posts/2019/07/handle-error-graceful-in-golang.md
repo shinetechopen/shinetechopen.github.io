@@ -5,6 +5,7 @@ draft: false
 geekblogAnchor: false
 tags:
     - Golang
+    - Microservice
 authors:
     - lurongkai
 # weight: 1
