@@ -1,0 +1,11 @@
+---
+# header:
+#   - name: Contact
+#     icon: gblog_email
+#     ref: "/contact"
+
+footer:
+  - name: Shinetech Software
+    icon: shinetech
+    ref: "https://www.shinetechsoftware.com"
+    external: true
