@@ -1,0 +1,679 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://gohugo.io/" version="0.96.0">Hugo</generator><title>Microservice on Shinetech Software</title><subtitle>Team Blog</subtitle><link href="https://blog.shinetechsoftware.org/tags/Microservice/" rel="alternate" type="text/html" title="HTML"/><link href="https://blog.shinetechsoftware.org/tags/Microservice/feed.xml" rel="self" type="application/atom+xml" title="Atom"/><updated>2022-04-01T07:39:50+00:00</updated><id>https://blog.shinetechsoftware.org/tags/Microservice/</id><entry><title>如何优雅的在 Golang 中进行错误处理</title><link href="https://blog.shinetechsoftware.org/posts/2019/07/handle-error-graceful-in-golang/" rel="alternate" type="text/html" hreflang="en"/><id>https://blog.shinetechsoftware.org/posts/2019/07/handle-error-graceful-in-golang/</id><author><name>Lu Rongkai</name></author><published>2019-07-26T09:39:48+08:00</published><updated>2019-07-26T09:39:48+08:00</updated><content type="html">
+&lt;p>如何优雅的在&lt;code>Golang&lt;/code>中进行错误处理？&lt;/p>
+&lt;p>答案是：没有……（本文完）&lt;/p>
+&lt;hr>
+&lt;p>开个玩笑，&lt;code>Golang&lt;/code>中的错误处理方式一直是社区热烈讨论的话题，有力挺者，有抱怨者，但不论如何，自 2009 年&lt;code>Golang&lt;/code>正式发布以来，关于错误处理就一直是现在这种状况。&lt;/p>
+&lt;p>随着&lt;code>Golang&lt;/code>愈加的火爆，原本是&lt;code>Java&lt;/code>、&lt;code>Node&lt;/code>、&lt;code>C#&lt;/code>等语言擅长的应用级开发领域也逐渐出现&lt;code>Golang&lt;/code>的身影。&lt;code>Golang&lt;/code>自身其实更加擅长做基础设施级开发，例如&lt;code>docker&lt;/code>，例如&lt;code>k8s&lt;/code>，再如&lt;code>etcd&lt;/code>，它友好的内存管理和简单到粗暴的语法（25 个关键字），特别适合过去&lt;code>C&lt;/code>和&lt;code>C++&lt;/code>这些语言所擅长的部分场景。我们有理由相信，&lt;code>Golang&lt;/code>下一个大的引爆点将也许会在&lt;code>IoT&lt;/code>上，因为它天然的适合。&lt;/p>
+&lt;p>当一门语言火起来，就会出现各式各样的应用，于是&lt;code>MVC&lt;/code>框架有了，音视频处理库有了，各种数据库驱动有了，甚至服务框架也出现了，游戏、&lt;code>Machine Learning&lt;/code>都不在话下，还要啥自行车？组合一下做应用级开发妥妥的没毛病。&lt;/p>
+&lt;p>但是，成也这 25 个关键字，败也这 25 个关键字，究其根本原因，都是因为它背后&lt;strong>简单&lt;/strong>的哲学。&lt;/p>
+&lt;p>做应用级开发可不是那么简单的，这涉及到很多的细节处理，例如本文将要讨论的错误处理。如果只是写一个库，那么这个话题相对比较简单，因为与&lt;code>API&lt;/code>打交道的都是开发者，你只管开心的往外扔&lt;code>error&lt;/code>就好了，总会有倒霉的程序员在使用你的代码时&lt;strong>DEBUG&lt;/strong>到白头，最后，以最严谨的方式，小心使用你的库；可是有人出现的地方就会有幺蛾子，一个常见的误区就是将&lt;strong>业务错误&lt;/strong>、&lt;strong>运行时错误&lt;/strong>、&lt;strong>程序错误&lt;/strong>一股脑的当成相同的&lt;code>error&lt;/code>来处理。&lt;/p>
+&lt;div class="gblog-toc gblog-toc__level--3">
+&lt;nav id="TableOfContents">
+&lt;ul>
+&lt;li>
+&lt;ul>
+&lt;li>&lt;a href="#语言级别的错误处理">语言级别的错误处理&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#不可恢复故障">不可恢复故障&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#可恢复故障">可恢复故障&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#可恢复故障的抛出方式">可恢复故障的抛出方式&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#单值函数的方式">单值函数的方式&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#多值函数的方式">多值函数的方式&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#函数式的方式">函数式的方式&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#golang-中将来可能的方式">Golang 中将来可能的方式&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#可恢复故障具体该怎么抛">可恢复故障具体该怎么抛&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#错误应该包含的信息">错误应该包含的信息&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#错误信息应该暴露多少">错误信息应该暴露多少&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#可恢复故障如何处理">可恢复故障如何处理&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#面向非用户的边界">面向非用户的边界&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#面向用户的边界">面向用户的边界&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/nav>
+&lt;hr />
+&lt;/div>
+&lt;blockquote>
+&lt;p>你是还没在&lt;code>error&lt;/code>上栽跟头，当你栽了跟头时才会哭着想起来，当年为什么没好好思考和反省&lt;strong>错误处理&lt;/strong>这么一个宏大的话题&lt;/p>
+&lt;/blockquote>
+&lt;p>那么，如何在现有的语言支持下，用一种相对优雅的方式进行错误处理呢？我们通过本文的思考和讨论，尝试予以解决。虽说主要讨论的是&lt;code>Golang&lt;/code>，但是这背后的思考其实适合大部分语言。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h2 id="语言级别的错误处理">
+语言级别的错误处理
+&lt;/h2>
+&lt;/div>
+&lt;p>&lt;code>Golang&lt;/code>是原生支持鸭子类型（&lt;a
+class="gblog-markdown__link"
+href="https://en.wikipedia.org/wiki/Duck_typing"
+>duck typing&lt;/a>）的，所以&lt;code>error&lt;/code>可以理解成一个“鸭子”的定义，它是这样的：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kd">type&lt;/span> &lt;span class="kt">error&lt;/span> &lt;span class="kd">interface&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">Error&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="kt">string&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>换句话讲，一切实现了&lt;code>Error() string&lt;/code>方法的&lt;code>struct&lt;/code>，都可以当成&lt;code>error&lt;/code>往外扔，神不神奇？不神奇……把它看成接口也无碍，反正其它语言也长的类似，比如：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-csharp" data-lang="csharp">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// csharp&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">public&lt;/span> &lt;span class="k">class&lt;/span> &lt;span class="nc">SystemException&lt;/span> &lt;span class="p">:&lt;/span> &lt;span class="n">Exception&lt;/span> &lt;span class="p">{}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">public&lt;/span> &lt;span class="k">class&lt;/span> &lt;span class="nc">InvalidOperationException&lt;/span> &lt;span class="p">:&lt;/span> &lt;span class="n">SystemException&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>问题来了，&lt;code>Golang&lt;/code>是没有继承这一说的，所以如果你想把错误规划成层级结构是行不通的，而且也不是&lt;code>Golang&lt;/code>的调调。不过定义多种错误终归是可以的：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kn">import&lt;/span> &lt;span class="s">&amp;#34;errors&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">var&lt;/span> &lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ErrNotAuthenticated&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">New&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;not authenticated&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ErrNotAuthorized&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">New&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;not authorized&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ErrNoPermission&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">New&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;no permission&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>鸭子类型在不使用继承的情况下变相支持了多态，所以是可以认为&lt;code>error&lt;/code>是个接口，&lt;code>error&lt;/code>的消费方可以不用关心背后是具体什么结构，只需要满足&lt;code>error&lt;/code>契约就行，这就是所谓的多态。&lt;/p>
+&lt;p>那么到这里为止，我们有了具体的&lt;code>error&lt;/code>，然后呢？总是得有一个地方去处理。从这里开始，&lt;code>Golang&lt;/code>与别的语言区分开了。&lt;/p>
+&lt;p>本来想解释一下什么是错误(error)，什么是异常(exceptional)，但是貌似太多的语言在混搭使用这两个术语，所以我们干脆放弃解释错误和异常，而使用可恢复和不可恢复来说明。同时，我个人实名点赞&lt;code>Golang&lt;/code>和&lt;code>Rust&lt;/code>在这两个概念上的区分。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="不可恢复故障">
+不可恢复故障
+&lt;/h3>
+&lt;/div>
+&lt;p>&lt;code>Golang&lt;/code>和&lt;code>Rust&lt;/code>都有&lt;code>panic&lt;/code>的概念，也就是指不可恢复的故障，一般遇到&lt;code>panic&lt;/code>时基本就不用再救了，大部分的时候都是直接以&lt;code>-1&lt;/code>为返回值退出程序就好，&lt;strong>除非你觉得我行我可以我还想再试试&lt;/strong>，那么使用&lt;code>recover&lt;/code>手段，比如：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="nx">fun&lt;/span> &lt;span class="nf">horrible&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">panic&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;some bad things happened&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">func&lt;/span> &lt;span class="nf">business&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">defer&lt;/span> &lt;span class="kd">func&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">p&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nb">recover&lt;/span>&lt;span class="p">();&lt;/span> &lt;span class="nx">p&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// give me another chance
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">horrible&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>如果不处理的话，程序就会自动退出，并打印出错误信息以及错误堆栈。&lt;code>Rust&lt;/code>的方式几乎一模一样，只不过有两点不同：&lt;code>Rust&lt;/code>中对应&lt;code>panic&lt;/code>的是&lt;code>panic!&lt;/code>宏，和&lt;code>recover&lt;/code>类似的功能是&lt;code>std::panic::catch_unwind&lt;/code>；另外就是退出后默认不打印堆栈，需要的话得手动设置&lt;code>RUST_BACKTRACE=1&lt;/code>环境变量。&lt;/p>
+&lt;p>这个非常好理解，比如数组越界了，内存满了，堆栈爆了，几乎碰到&lt;code>panic&lt;/code>就很少有恢复的可能。&lt;/p>
+&lt;p>&lt;code>panic&lt;/code>背后其实是一种&lt;strong>短路&lt;/strong>（或者叫&lt;strong>快捷方式&lt;/strong>）哲学，任何层级的流程在执行过程中，通过&lt;code>panic&lt;/code>都可以直接让程序跳到结束或者有&lt;code>recover&lt;/code>的地方。这与大多数据的高级语言的&lt;code>Exception&lt;/code>不谋而合，举个例子：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-csharp" data-lang="csharp">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// csharp&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">public&lt;/span> &lt;span class="k">void&lt;/span> &lt;span class="n">DoSometingIntresting&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">throw&lt;/span> &lt;span class="k">new&lt;/span> &lt;span class="n">InvalidOperationException&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;not allowed&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>只要碰到&lt;code>Exception&lt;/code>就一定会中断正常的执行顺序。稍显遗憾的是，这些语言中的&lt;code>Exception&lt;/code>不完全能把程序打死，因为它们大多都提供了&lt;code>try-catch&lt;/code>语言构造，让你可以在任何想处理的地方，或处理或加工，总之手法多样。打不死的原因也正是因为，一个简单的&lt;code>catch (Exception ex) {}&lt;/code>就足够吃掉所有的故障。&lt;/p>
+&lt;p>这也是为什么在开头那部分里不用错误和异常的原因，因为：&lt;/p>
+&lt;blockquote>
+&lt;p>大多数支持&lt;code>try-catch-exception&lt;/code>机制的语言里，可恢复和不可恢复的故障都用 Exception 来表示，这加剧了开发者的心智负担，因为这需要仔细的处理 Exception 的类型。例如，C#里的&lt;strong>不可恢复&lt;/strong>错误往往都有特定的继承链，比如&lt;code>SystemException&lt;/code>，使用时需要小心处理。&lt;/p>
+&lt;/blockquote>
+&lt;p>更好的理解方式是，把&lt;code>try-catch-exception&lt;/code>这种机制，主要作为处理&lt;strong>可恢复&lt;/strong>故障的手段，而把少量&lt;strong>不可恢复&lt;/strong>的故障，在充分思考的情况下处理或放任。换句话讲，&lt;strong>catch 一定尽可能的按下游方法可能出现的&lt;code>Exception&lt;/code>类型去匹配，不要随意通吃&lt;/strong>。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="可恢复故障">
+可恢复故障
+&lt;/h3>
+&lt;/div>
+&lt;p>与&lt;code>panic&lt;/code>有所区别的&lt;strong>可恢复&lt;/strong>故障，&lt;code>Golang&lt;/code>也有约定的方式。这就是&lt;code>error&lt;/code> 。&lt;/p>
+&lt;p>所谓可恢复，就是虽然无法顺利的将当前的流程执行完毕，但是不影响大局，消费方可以按自己的意愿去安排接下来的逻辑，或中断执行某个业务，或检查是否自己使用的方式有问题，或有备用的流程替换等等。&lt;/p>
+&lt;p>实践中经常碰到的可恢复故障有几大类：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>前置检查失败&lt;/strong>，大多是指参数没有按约定提供，例如参数不可空校验失败的错误，参数数值范围不正确等等，这是&lt;strong>调用方的 bug&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>程序错误&lt;/strong>，例如通过&lt;code>req.(sometype)&lt;/code>进行类型转换，到运行时发现转不过去，这是&lt;strong>自身的 bug&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>依赖服务调用错误&lt;/strong>，比如查询数据库时发生了异常，往往都是第三方产生运行时错误，是最经常处理的错误&lt;/li>
+&lt;li>&lt;strong>业务执行错误&lt;/strong>，例如一个发送验证码的函数，在执行过程中发现某个用户的发送频率超过阈值，那这是一个特定业务的失败&lt;/li>
+&lt;/ul>
+&lt;p>基本所有在开发过程中碰到的错误都能归入以上 4 类。而往往需着重关注的，是后两类。前两类实属于&lt;strong>bug&lt;/strong>，需要在上线前就清理完毕的。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h2 id="可恢复故障的抛出方式">
+可恢复故障的抛出方式
+&lt;/h2>
+&lt;/div>
+&lt;p>我们来做一个思考。在一门语言中，如果一个方法有可能出错，通常会通过什么途径把错误信息告诉调用者呢？换句话讲，正常的方法返回数据，不正常的方法需要有途径“带货”，把错误信息以某种方式带出去。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="单值函数的方式">
+单值函数的方式
+&lt;/h3>
+&lt;/div>
+&lt;p>如果这门语言只支持单值函数，也就是返回值只能是一个，那么就需要有一个容器来储存正常的值和出错时需要返回的错误信息，就像：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-fsharp" data-lang="fsharp">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// fsharp
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="k">type&lt;/span> &lt;span class="nc">Result&lt;/span>&lt;span class="o">&amp;lt;&lt;/span>&lt;span class="k">&amp;#39;&lt;/span>&lt;span class="n">T&lt;/span>&lt;span class="o">&amp;gt;&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="o">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">Data&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="k">&amp;#39;&lt;/span>&lt;span class="n">T&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">Error&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="kt">string&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="o">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>此时，每个使用该方法的地方，只需要简单判断一下&lt;code>res.Error&lt;/code>就能知道有没有错误发生。&lt;/p>
+&lt;p>像不像是很多&lt;code>Restful&lt;/code>接口返回数据的模样？是的，完全是一个模式：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-json" data-lang="json">&lt;span class="line">&lt;span class="cl">&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nt">&amp;#34;data&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// ...
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nt">&amp;#34;errmsg&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s2">&amp;#34;&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nt">&amp;#34;errcode&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s2">&amp;#34;610100&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这里先忽略这个错误码，后面的内容我们会涉及到。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="多值函数的方式">
+多值函数的方式
+&lt;/h3>
+&lt;/div>
+&lt;p>那如果语言支持多值返回（其实还是单值，大多是引入&lt;code>元组（Tuple）&lt;/code>来处理，例如&lt;code>Python&lt;/code>），概念上和如下的方式相同：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-csharp" data-lang="csharp">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// csharp&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">public&lt;/span> &lt;span class="n">Tuple&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="kt">int&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">&amp;gt;&lt;/span> &lt;span class="n">Multiple&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">Tuple&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Create&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="m">0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;something wrong&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>好了，该&lt;code>Golang&lt;/code>出场了，既然我支持多值返回，那么应该不用明显的包装类型就可以做到了吧：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kd">func&lt;/span> &lt;span class="nf">multiple&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;something wrong&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>等等，错误用&lt;code>string&lt;/code>表示有点丑是不是，没关系，&lt;code>Golang&lt;/code>帮你抽象出一个&lt;code>error&lt;/code>接口来，最终就变成了&lt;code>func multiple() (int, error) {}&lt;/code>这样子了，
+和定义一个&lt;code>type res struct { Data int; Err error}&lt;/code>相比，好像没进步太多？&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="函数式的方式">
+函数式的方式
+&lt;/h3>
+&lt;/div>
+&lt;p>那还有没有更好的方式了呢？如果有接触过&lt;code>Functional Programming&lt;/code>的东西，就会想到，通过&lt;code>Generic&lt;/code> + &lt;code>Discriminated Unions&lt;/code> + &lt;code>partten matching&lt;/code>的方式更加优雅。&lt;/p>
+&lt;p>核心在&lt;code>Discriminated Unions&lt;/code>上，也叫做&lt;code>Enum&lt;/code>，&lt;code>Union&lt;/code>，&lt;code>Tagged Union&lt;/code>，&lt;code>variant&lt;/code>，&lt;code>variant record&lt;/code>，&lt;code>choice type&lt;/code>，&lt;code>disjoint union&lt;/code>，&lt;code>sum type&lt;/code>，&lt;code>coproduct&lt;/code>……它是一种可以存储多种（但是数量固定）类型值的结构，同一时间&lt;strong>只可以&lt;/strong>使用其中的一种类型。举个例子，如下的&lt;code>DUs&lt;/code>可以避免&lt;code>null&lt;/code>的显式使用：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-fsharp" data-lang="fsharp">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// fsharp
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="k">type&lt;/span> &lt;span class="nc">Option&lt;/span>&lt;span class="o">&amp;lt;&lt;/span>&lt;span class="k">&amp;#39;&lt;/span>&lt;span class="n">T&lt;/span>&lt;span class="o">&amp;gt;&lt;/span> &lt;span class="o">=&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="o">|&lt;/span> &lt;span class="n">None&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="o">|&lt;/span> &lt;span class="n">Some&lt;/span> &lt;span class="k">of&lt;/span> &lt;span class="k">&amp;#39;&lt;/span>&lt;span class="n">T&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这个&lt;code>Option&amp;lt;'T&amp;gt;&lt;/code>（也有叫&lt;code>Maybe&lt;/code>的）要么只有&lt;code>None&lt;/code>值，要么只有一个包含&lt;code>'T&lt;/code>的&lt;code>Some&lt;/code>值，于是，当函数返回一个&lt;code>Option&lt;/code>类型的值时，消费方就可以不再写诸如&lt;code>Golang&lt;/code>中的&lt;code>if err != nil {}&lt;/code>了，而是使用更加高级的模式匹配完成：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-fsharp" data-lang="fsharp">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// fsharp
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="k">let&lt;/span> &lt;span class="nv">res&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">somemethod&lt;/span>&lt;span class="bp">()&lt;/span> &lt;span class="c1">// will return an Option value
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="k">match&lt;/span> &lt;span class="n">res&lt;/span> &lt;span class="k">with&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="o">|&lt;/span> &lt;span class="n">None&lt;/span> &lt;span class="o">-&amp;gt;&lt;/span> &lt;span class="c1">// data is empty, like null
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="o">|&lt;/span> &lt;span class="n">Some&lt;/span> &lt;span class="n">d&lt;/span> &lt;span class="o">-&amp;gt;&lt;/span> &lt;span class="c1">// d is data
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>等等，这不像是在做错误处理？没关系，稍微变换一下：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-fsharp" data-lang="fsharp">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// fsharp
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="k">type&lt;/span> &lt;span class="nc">Result&lt;/span>&lt;span class="o">&amp;lt;&lt;/span>&lt;span class="k">&amp;#39;&lt;/span>&lt;span class="n">T&lt;/span>&lt;span class="o">,&lt;/span> &lt;span class="k">&amp;#39;&lt;/span>&lt;span class="n">TError&lt;/span>&lt;span class="o">&amp;gt;&lt;/span> &lt;span class="o">=&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="o">|&lt;/span> &lt;span class="n">Ok&lt;/span> &lt;span class="k">of&lt;/span> &lt;span class="k">&amp;#39;&lt;/span>&lt;span class="n">T&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="o">|&lt;/span> &lt;span class="n">Error&lt;/span> &lt;span class="k">of&lt;/span> &lt;span class="k">&amp;#39;&lt;/span>&lt;span class="n">TError&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>现在的使用方式变成了：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-fsharp" data-lang="fsharp">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// fsharp
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="k">let&lt;/span> &lt;span class="nv">res&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">somemethod&lt;/span>&lt;span class="bp">()&lt;/span> &lt;span class="c1">// will return an Option value
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="k">match&lt;/span> &lt;span class="n">res&lt;/span> &lt;span class="k">with&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="o">|&lt;/span> &lt;span class="n">Ok&lt;/span> &lt;span class="n">t&lt;/span> &lt;span class="o">-&amp;gt;&lt;/span> &lt;span class="c1">// t is normal result
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="o">|&lt;/span> &lt;span class="n">Error&lt;/span> &lt;span class="n">err&lt;/span> &lt;span class="o">-&amp;gt;&lt;/span> &lt;span class="c1">// err is error
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>好像还是没什么用？那是因为没有接触过&lt;code>FP&lt;/code>中的&lt;code>Warpper&lt;/code>类型的概念，基本上有了&lt;code>Warpper&lt;/code>类型，就可以&lt;code>bind&lt;/code>或者&lt;code>lift&lt;/code>等等了。&lt;code>Rust&lt;/code>走的就是这种路子，并有配套的函数支持。由于&lt;code>Option&lt;/code>和&lt;code>Result&lt;/code>如此常用，以至于很多语言核心库都内置了对应的结构，有兴趣可以参考我很早之前写过的一点&lt;a
+class="gblog-markdown__link"
+href="http://www.ituring.com.cn/article/207638"
+>东西&lt;/a>。&lt;/p>
+&lt;p>那么，&lt;code>Golang&lt;/code>为什么不使用这种方式呢？因为，第一缺乏泛型支持，&lt;code>Warpper&lt;/code>如果没有泛型支持的话就无法泛化，会导致很多的模板代码，进而还不如直白的处理&lt;code>error&lt;/code>；第二没有&lt;code>Discriminated Unions&lt;/code>，多个类型无法联合起来并在同一时间只使用其中一种，也就快速区分彼此；第三没有模式匹配，也就无法更进一步的简化代码，不如还是使用&lt;code>if err != nil {}&lt;/code>。&lt;/p>
+&lt;p>上面诸多方式仍然停留在&lt;code>调用-返回-处理&lt;/code>这个流程上，顶多也就是代码简洁与否的问题。我个人是认可&lt;code>Golang&lt;/code>的错误处理方式的，虽然会出现很多的模板代码，但是在写代码的每一步都能清晰的并强迫性的让开发者处理潜在的错误，也是一种提高质量的不错手段。&lt;/p>
+&lt;p>实践中使用最多的方式，是隔空传送&lt;code>Exception&lt;/code>，虽然有很多的文章在指导大家如何去花式处理&lt;code>Exception&lt;/code>，但是仍然值得大家留意其中的陷阱。毕竟，异常是一种中断当前执行流程的手段，并且会穿透调用栈，所以需要格外留意捕获到的异常究竟代表了什么含义，而不是一股脑的全部捕获。这一点要赞一下&lt;code>Java&lt;/code>，&lt;code>Java&lt;/code>中的方法签名会强制列出有可能抛出的异常类型，以供开发者快速处理可能出现的异常。&lt;/p>
+&lt;p>有关&lt;code>Exception&lt;/code>设计和使用的话题，我们将来有机会再来聊。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="golang-中将来可能的方式">
+Golang 中将来可能的方式
+&lt;/h3>
+&lt;/div>
+&lt;p>在&lt;code>Go 2&lt;/code>的草案中，我们看到了有关于&lt;code>error&lt;/code>相关的一些提案，那就是&lt;code>check/handle&lt;/code>函数。&lt;/p>
+&lt;p>我们也许在下一个大版本的&lt;code>Golang&lt;/code>可以像下面这样处理错误：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kn">import&lt;/span> &lt;span class="s">&amp;#34;fmt&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">func&lt;/span> &lt;span class="nf">game&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="kt">error&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">handle&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">fmt&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Errorf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;dependencies error: %v&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">resource&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">check&lt;/span> &lt;span class="nf">findResource&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="c1">// return resource, error
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="k">defer&lt;/span> &lt;span class="kd">func&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">resource&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Release&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">profile&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">check&lt;/span> &lt;span class="nf">loadProfile&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="c1">// return profile, error
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="k">defer&lt;/span> &lt;span class="kd">func&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">profile&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Close&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// ...
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>有兴趣的同学请关注&lt;a
+class="gblog-markdown__link"
+href="https://go.googlesource.com/proposal/&amp;#43;/master/design/go2draft-error-handling-overview.md"
+>这个提案&lt;/a>。题外话，还有一个&lt;code>try&lt;/code>&lt;a
+class="gblog-markdown__link"
+href="https://go.googlesource.com/proposal/&amp;#43;/master/design/32437-try-builtin.md"
+>提案&lt;/a>正式被&lt;a
+class="gblog-markdown__link"
+href="https://github.com/golang/go/issues/32437#issuecomment-513002788"
+>否了&lt;/a>。&lt;/p>
+&lt;p>所以，在&lt;code>Golang&lt;/code>中我们目前可以使用的方式，就是以&lt;code>error&lt;/code>接口为基础，通过不同的错误类型，来向消费方提供有价值的信息。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h2 id="可恢复故障具体该怎么抛">
+可恢复故障具体该怎么抛
+&lt;/h2>
+&lt;/div>
+&lt;p>重点来了，说了这么多，错误终归是要扔出去的，虽然都是统一的&lt;code>error&lt;/code>接口，但是手法却应该仔细斟酌。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="错误应该包含的信息">
+错误应该包含的信息
+&lt;/h3>
+&lt;/div>
+&lt;p>错误最主要包含的，就是错误信息，是给人类阅读使用的，更确切的讲，是&lt;strong>给开发者阅读的&lt;/strong>。所以&lt;code>error&lt;/code>接口里的&lt;code>Error() string&lt;/code>直接将这个信息返回。那为什么要返回&lt;code>error&lt;/code>，而不是直接返回&lt;code>string&lt;/code>呢？因为在开发过程中，我们往往需要一些额外的信息。&lt;/p>
+&lt;p>首先，如果只有错误的文本，我们很难定位到具体的出错地点。虽然通过在代码中搜索错误文本也是有可能找到出错地点的，但是信息有限。所以，在实践中，我们往往会将出错时的调用栈信息也附加上去。调用栈对消费方是没有意义的，从隔离和自治的角度来看，消费方唯一需要关心的就是错误文本和错误类型。调用栈对实现者自身才是是有价值的。所以，如果一个方法需要返回错误，我们一般会使用&lt;code>errors.WithStack(err)&lt;/code>或者&lt;code>errors.Wrap(err, &amp;quot;custom message&amp;quot;)&lt;/code>的方式，把此刻的调用栈加到&lt;code>error&lt;/code>里去，并且在某个统一地方记录日志，方便开发者快速定位问题。&lt;/p>
+&lt;p>举个例子：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kn">import&lt;/span> &lt;span class="s">&amp;#34;github.com/pkg/errors&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">func&lt;/span> &lt;span class="nf">FindUser&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">userId&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="nx">User&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">error&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">userId&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s">&amp;#34;&amp;#34;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">fmt&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Errorf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;userId is required&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">user&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">db&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">FindUserById&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">userId&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Wrapf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;query user %s failed&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">userId&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">user&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kc">nil&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>如此，在记录日志的地方通过使用&lt;code>%+v&lt;/code>格式化占位符就可以把堆栈信息完整的记录下来。&lt;/p>
+&lt;p>其次，如果是业务执行时的错误，只有错误消息的话，往往是不够的，因为调用方更加关心错误背后业务上的原因，例如，提交订单接口返回了&lt;strong>提交订单失败&lt;/strong>的错误，为什么失败？这个时候就需要某种机制来告诉调用者一些业务上的原因。显然，如果通过错误消息告诉的话，调用方就不得不对错误文本进行判断，这很不优雅，所以我们往往通过其它两种方式来处理。&lt;/p>
+&lt;p>&lt;strong>1. 特定错误类型&lt;/strong>，例如：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kd">var&lt;/span> &lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ErrInventoryInsufficient&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">New&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;product inventory insufficient&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ErrProductSalesTerritoryLimit&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">New&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;product sales torritory limit&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">func&lt;/span> &lt;span class="nf">Ordering&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">userId&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">preOrder&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="nx">PreOrder&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="nx">model&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Order&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">error&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">order&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="o">&amp;amp;&lt;/span>&lt;span class="nx">model&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Order&lt;/span>&lt;span class="p">{}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">shippingAddress&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">preOrder&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Shipping&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="nx">_&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">item&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="k">range&lt;/span> &lt;span class="nx">preOrder&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Items&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nf">findInventory&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">item&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Product&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Id&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">&amp;lt;=&lt;/span> &lt;span class="mi">0&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">ErrInventoryInsufficient&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">!&lt;/span>&lt;span class="nf">isValidSalesTerritory&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">item&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Product&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Id&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">shippingAddress&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">ErrProductSalesTerritoryLimit&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">order&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">AddItem&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">item&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// other processing
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="k">return&lt;/span> &lt;span class="nx">order&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kc">nil&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这样，消费方拿到错误后，可以很简单的判断一下就能知道具体发生了什么：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kd">func&lt;/span> &lt;span class="nf">UserOrderController&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span> &lt;span class="nx">context&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Context&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">preOrder&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="nx">PreOrder&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// some preparing
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nx">user&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nf">FromContext&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">order&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">service&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Ordering&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">user&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">userId&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">preOrder&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">switch&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">case&lt;/span> &lt;span class="nx">service&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">ErrInventoryInsufficient&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="c1">// handling
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="k">case&lt;/span> &lt;span class="nx">service&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">ErrProductSalesTerritoryLimit&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="c1">// handling
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// ...
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这也是很多组件向外部提供错误的首选方式，例如，&lt;code>mongo.ErrNoDocuments&lt;/code>&lt;/p>
+&lt;p>但是遗憾的是，如果是跨边界的&lt;code>RPC&lt;/code>调用的话（假如刚才的&lt;code>Ordering&lt;/code>是个微服务），那么就不能采用这种方式了，因为错误&lt;strong>类型&lt;/strong>是无法有效序列化的，即使序列化了也失去了类型判断的能力。所以，我们在集成有边界的服务时，往往会采用另一种方式。&lt;/p>
+&lt;p>&lt;strong>2. 错误标记&lt;/strong>，也就是通过某种约定好的标记，用于表示某种类型的业务错误。客户端调用远程的&lt;code>Restful&lt;/code>服务也是边界与边界间的调用，所以我们经常可以在&lt;code>API&lt;/code>的文档中看到这样的模式：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>返回码&lt;/th>
+&lt;th>错误码描述&lt;/th>
+&lt;th>说明&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>40001&lt;/td>
+&lt;td>invalid credential&lt;/td>
+&lt;td>不合法的调用凭证&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>40002&lt;/td>
+&lt;td>invalid grant_type&lt;/td>
+&lt;td>不合法的 grant_type&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>这里的返回码就是一种约定好的标记，也叫&lt;strong>业务码&lt;/strong>。所谓跨边界调用，也可以换个说法，叫做进程间通讯，如果只在进程内通讯，那使用特定错误类型就足够了，但是一旦出了进程，就需要某种标记手段了。&lt;/p>
+&lt;p>&lt;code>Golang&lt;/code>在实践中也可以采用这种方式，尤其是在边界间传递错误的时候：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kn">import&lt;/span> &lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;fmt&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;regexp&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">type&lt;/span> &lt;span class="nx">BusinessError&lt;/span> &lt;span class="kd">struct&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Code&lt;/span> &lt;span class="kt">string&lt;/span> &lt;span class="s">`json:&amp;#34;code&amp;#34;`&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Msg&lt;/span> &lt;span class="kt">string&lt;/span> &lt;span class="s">`json:&amp;#34;msg&amp;#34;`&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// error interface
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kd">func&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">be&lt;/span> &lt;span class="nx">BusinessError&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="nf">Error&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="kt">string&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">fmt&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;[%s] %s&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">be&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Code&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">be&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Msg&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">var&lt;/span> &lt;span class="nx">codeReg&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nx">regexp&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">MustCompile&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;^\\d{6}$&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// factory method
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kd">func&lt;/span> &lt;span class="nf">NewBusinessError&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">code&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">msg&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="nx">BusinessError&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">!&lt;/span>&lt;span class="nx">codeReg&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">MatchString&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">code&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">panic&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;code can only contain 6 numbers&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">msg&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s">&amp;#34;&amp;#34;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">panic&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;msg is required&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="o">&amp;amp;&lt;/span>&lt;span class="nx">BusinessError&lt;/span>&lt;span class="p">{&lt;/span> &lt;span class="nx">code&lt;/span>&lt;span class="err">，&lt;/span> &lt;span class="nx">msg&lt;/span> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">var&lt;/span> &lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ErrInventoryInsufficient&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nf">NewBusinessError&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;301001&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;product inventory insufficient&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ErrProductSalesTerritoryLimit&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nf">NewBusinessError&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;301002&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;product sales torritory limit&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>注意&lt;code>NewBusinessError&lt;/code>内部使用的是&lt;code>panic&lt;/code>，这背后的思考是，如果程序初始化时连错误码的定义都能出现问题，我倾向于让程序跑不起来，这样便在开发阶段就能妥善处理。&lt;/p>
+&lt;p>消费方拿到反序列化后的错误时，里面已经包含了标记，查询文档分别做处理就好。不管是&lt;code>Restful&lt;/code>，还是&lt;code>GRPC&lt;/code>、&lt;code>GraphQL&lt;/code>，都可以使用这种模式来处理。甚至更大好处是，客户端不必判断错误文本并设法解析出用户友好的提示，服务不再提供用户提示（想想看，如果要对错误文本提供&lt;code>i18n&lt;/code>支持的话，得多难看……），一切都交给客户端去自主选择。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="错误信息应该暴露多少">
+错误信息应该暴露多少
+&lt;/h3>
+&lt;/div>
+&lt;p>&lt;strong>暴露多少错误细节，取决于对这个错误感兴趣的一方是谁。&lt;/strong>
+&lt;strong>暴露多少错误细节，取决于对这个错误感兴趣的一方是谁。&lt;/strong>
+&lt;strong>暴露多少错误细节，取决于对这个错误感兴趣的一方是谁。&lt;/strong>&lt;/p>
+&lt;p>如果感兴趣一方是其他开发者，那么事情就会变的愉快很多，因为，开发者感兴趣的错误，一般都是&lt;strong>bug&lt;/strong>或者&lt;strong>缺陷&lt;/strong>，我们不必把所有的细节都解释给开发者，但是必要的信息是要提供的，比如一个简单的错误文本。&lt;/p>
+&lt;p>举个例子，我们正在写一个包，其中有一个用于发送（大陆）短信的方法：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kn">import&lt;/span> &lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;regexp&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;github.com/pkg/errors&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">var&lt;/span> &lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">phoneRegexp&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nx">regexp&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">MustCompile&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;^((\\+86)|(86))?\\d{11}$&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ErrPhoneSmsExceedLimit&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">New&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;target phone exceed send limits&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">func&lt;/span> &lt;span class="nf">SendSms&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">phone&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">content&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="kt">error&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">phone&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s">&amp;#34;&amp;#34;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">New&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;phone is required&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">content&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s">&amp;#34;&amp;#34;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">New&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;content is required&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">!&lt;/span>&lt;span class="nx">phoneRegexp&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">MatchString&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">phone&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">New&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;phone format incorrect&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nf">exceedLimits&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">phone&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">ErrPhoneSmsExceedLimit&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// ...
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>由于使用&lt;code>SendSms&lt;/code>的人只可能是开发者，所以简单的将错误信息返回就可以了，无须再多做处理。&lt;/p>
+&lt;p>这里需要插一句，一切的错误都会影响消费方的执行（除非消费方总是忽略错误），所以总在某个地方将我们返回的错误展示给开发者。&lt;/p>
+&lt;p>在上面这个例子中，我们已经要求了&lt;code>phone&lt;/code>和&lt;code>content&lt;/code>不应该为空字符串，那么消费方为什么还要给我空字符串呢？&lt;strong>这是 bug&lt;/strong>。&lt;/p>
+&lt;p>另外，如果手机号超过了每日发送的条数限制，这&lt;strong>不是 bug&lt;/strong>，而是业务错误，所以我们用&lt;code>ErrPhoneSmsExceedLimit&lt;/code>提醒开发者，需要额外留意和处理一下，必要的时候用一些友好信息告诉用户。在该例子中是假定&lt;code>SendSms&lt;/code>和消费方处于同一进程，所以只需要通过判断&lt;code>err == sms.ErrPhoneSmsExceedLimit&lt;/code>就可以准确的捕获到业务错误。那如果这个发短信的方法在一个微服务之后呢？上面我们也提到了，这时候需要有某种标记：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kd">var&lt;/span> &lt;span class="nx">ErrPhoneSmsExceedLimit&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nf">NewBusinessError&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;310001&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;target phone exceed send limits&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">func&lt;/span> &lt;span class="nf">SendSms&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">phone&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">content&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="kt">error&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// ...
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="k">if&lt;/span> &lt;span class="nf">exceedLimits&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">phone&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">ErrPhoneSmsExceedLimit&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// ...
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>是不是殊途同归了？当然了，这其中还涉及到一些边界上对错误的包装与转换，我们在后面会提到。&lt;/p>
+&lt;p>那么接下来，如果这个方法还需要调用一些别的&lt;code>RPC&lt;/code>（这里假定是个&lt;code>Restful&lt;/code>服务）才能完成最终的发送，并且调用有可能会有错误，该怎么处理呢？我们会包装它：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kd">func&lt;/span> &lt;span class="nf">SendSms&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">phone&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">content&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="kt">error&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// ...
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">provider&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">service&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">NewSmsProvider&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;appid&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;appsecret&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">res&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">provider&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Send&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">phone&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">content&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Wrapf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;send sms to phone %s failed&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">phone&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// ...
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>如此，消费方看到的只是&lt;code>send sms to phone xxx failed&lt;/code>（包装进去的低层&lt;code>err&lt;/code>会在边界处切掉），不过不影响我们服务本身打印出调用栈，方便我们知道是我们使用&lt;code>RPC&lt;/code>的姿势有问题，还是网络出现故障了，还是……总之，我们进行不下去了。我们不必告诉消费方这些低层的错误细节，但是我们需要保留这些细节方便自己。&lt;/p>
+&lt;p>我们继续思考，如果调用&lt;code>RPC&lt;/code>成功返回了，就一定代表成功了吗？当然不是，没有&lt;code>err&lt;/code>很可能只是说明整个&lt;code>RPC&lt;/code>成功完成，但没说业务一定是成功的呀，所以我们还得对&lt;code>res&lt;/code>进一步分析：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kd">func&lt;/span> &lt;span class="nf">SendSms&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">phone&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">content&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="kt">error&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// ...
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">provider&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Send&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">phone&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">content&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// ...
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">switch&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Code&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">case&lt;/span> &lt;span class="s">&amp;#34;0000&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">case&lt;/span> &lt;span class="s">&amp;#34;1001&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">log&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;sms provider report [%s] insufficient balance&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">code&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">default&lt;/span>&lt;span class="p">:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">log&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;sms provider report [%s] %s&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Code&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Msg&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">New&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;send sms failed&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>我们已知的业务码只有&lt;code>0000&lt;/code>代表成功，所以返回&lt;code>nil&lt;/code>表示本次调用成功；&lt;code>1001&lt;/code>代表余额不足，其它的我们可能并不关心，那么在简单的记录日志之后，返回给调用方的只有&lt;code>send sms failed&lt;/code>。这是因为，我的错误我知道，我依赖服务的错误我也应该知道，但是，依赖我的服务如果不是使用姿势不对，或者业务不正确的话，没有理由了解这背后发生的过多细节，唯一需要让消费方知道的就是&lt;strong>没成功&lt;/strong>。与此同时，我们记录了所有的细节，不管是显式的&lt;code>log.Printf&lt;/code>还是在边界上打印的调用栈，都将进一步帮助我们分析和修复错误，或者改善实现细节。&lt;/p>
+&lt;p>那么，如果此时&lt;code>SendSms&lt;/code>方法还需要调用并处理另一个&lt;strong>内部&lt;/strong>的方法&lt;code>darkMagic(phone string) error&lt;/code>返回的错误呢？没关系，仍然&lt;code>errors.Wrap(err, &amp;quot;cannot perform such operation&amp;quot;)&lt;/code>就好了。这不仅仅是给调用方看，更重要的是，这说明了在&lt;code>darkMagic&lt;/code>里&lt;strong>可能有一个 bug&lt;/strong>，需要我们自己处理，因为，我们是最清楚这些逻辑的，如果一切检查（参数的，业务的）都没问题，还会在内部出错，那么就可能是我们的实现有问题了。好在，这一类的缺陷通过单元测试一般都可以检测出来。&lt;/p>
+&lt;blockquote>
+&lt;p>一个小问题，&lt;code>darkMagic()&lt;/code>里如果调用&lt;code>spellForce()&lt;/code>又得到&lt;code>error&lt;/code>了怎么办？
+答案是，直接&lt;code>return err&lt;/code>
+堆栈信息在&lt;code>spellForce()&lt;/code>扔出的&lt;code>error&lt;/code>里就有了，错误信息也很明确，着实不用再包装一层。
+也就是说，进程内遇到的&lt;code>error&lt;/code>，只在离边界最近的地方才需要&lt;code>errors.Wrap()&lt;/code>成对调用方友好（和隐藏细节）的&lt;code>error&lt;/code>，其它的都直白的往上&lt;code>return err&lt;/code>就好&lt;/p>
+&lt;/blockquote>
+&lt;p>总结一下：&lt;/p>
+&lt;ul>
+&lt;li>你使用我的姿势不对，例如空字符串，会造成我的错误，直接返回&lt;code>errors.New()&lt;/code>，这是&lt;strong>bug&lt;/strong>，你去处理&lt;/li>
+&lt;li>你使用的姿势是对的，我定睛一看是业务上问题，给你一个让你有机会通过&lt;strong>错误类型&lt;/strong>或者&lt;strong>错误码&lt;/strong>知道的原因，你&lt;strong>酌情处理&lt;/strong>&lt;/li>
+&lt;li>你使用的姿势是对的，我检查发现业务也没毛病，但是我依赖的一些服务（例如数据库）出幺蛾子了，那么我会&lt;code>Wrap&lt;/code>成一个既方便我调查原因，同时在不让你关注过多细节的前提下告诉你：&lt;strong>失败了&lt;/strong>，你&lt;strong>酌情处理&lt;/strong>，例如重试或者告诉最终用户“我们的服务开了会小差，请稍后重试”等&lt;/li>
+&lt;li>如果我觉得这一定是个很严重的问题，并且我也无法解决，同时认为你也不该尝试解决，那么就&lt;code>panic&lt;/code>吧。这一点在在线业务上几乎遇不到，除了“内存满了”、“堆栈爆了”这些无法抗拒的原因，&lt;code>panic&lt;/code>的很少会有&lt;/li>
+&lt;/ul>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h2 id="可恢复故障如何处理">
+可恢复故障如何处理
+&lt;/h2>
+&lt;/div>
+&lt;p>我们在“错误信息应该暴露多少”一节里已经展示过一些处理方式，尤其是对跨越多层边界的错误，进程内遇到错误的情形等。非边界处的错误处理很直白，上一节也做出了解释和示例，这一节我们讨论一下在边界处如何处理遇到的&lt;code>error&lt;/code>。&lt;/p>
+&lt;p>所谓边界，就是离调用方最近的地方，调用方可以是某个服务，也可以是用户使用的某种客户端，总之是在消费你在边界处提供的服务。边界以内，只有进程内可见。&lt;/p>
+&lt;p>所以，我们可以认为，一个**用户微服务的&lt;code>GetUserById()&lt;/code>**在边界上，一个&lt;code>beego.Get(&amp;quot;/&amp;quot;,func(ctx *context.Context){})&lt;/code> 用&lt;code>MVC&lt;/code>实现的方法也在边界上。&lt;/p>
+&lt;p>通常情况下，在边界处，我们就需要对下游产生的错误做出判断，同时，对一些非业务错误一些包装，隐藏错误细节。如果边界不是面向最终用户的，那么也会提供一些开发者友好的错误文本。&lt;/p>
+&lt;p>我们分别来这其中处理错误的不同。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="面向非用户的边界">
+面向非用户的边界
+&lt;/h3>
+&lt;/div>
+&lt;p>对于一个用户微服务的&lt;code>GetUserById()&lt;/code>，它的消费方一般不会是最终用户，而是某种&lt;strong>聚合网关&lt;/strong>或者其它&lt;strong>微服务&lt;/strong>，所以它藏匿在整个安全壁垒之后。我们通常会这么处理：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kn">import&lt;/span> &lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;context&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;github.com/pkg/errors&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;go.mongodb.org/mongo-driver/bson&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;go.mongodb.org/mongo-driver/bson/primitive&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;go.mongodb.org/mongo-driver/mongo&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">var&lt;/span> &lt;span class="nx">ErrUserNotValid&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nf">NewBusinessError&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;500213&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;user is not valid&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">func&lt;/span> &lt;span class="nf">GetUserById&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">userId&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="nx">model&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">User&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">error&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">userId&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s">&amp;#34;&amp;#34;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">New&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;userId is required&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">uid&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">primitive&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">ObjectIDFromHex&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">userId&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Wrap&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;userId format incorrect&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">user&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="o">&amp;amp;&lt;/span>&lt;span class="nx">model&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">User&lt;/span>&lt;span class="p">{}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">coll&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">db&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Collection&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;users&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">coll&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">FindOne&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">context&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">TODO&lt;/span>&lt;span class="p">(),&lt;/span> &lt;span class="nx">bson&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">M&lt;/span>&lt;span class="p">{&lt;/span>&lt;span class="s">&amp;#34;_id&amp;#34;&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="nx">uid&lt;/span>&lt;span class="p">}).&lt;/span>&lt;span class="nf">Decode&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">user&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="nx">mongo&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">ErrNoDocuments&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// maybe return nil, nil is fine
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="c1">// but, depends on design, be careful
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Wrap&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;cannot perform such operation&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// maybe do local business check
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="k">if&lt;/span> &lt;span class="nf">localBusinessCheck&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">user&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">ErrUserNotValid&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// maybe call RPC to do business action
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nx">fine&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">rpc&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">BusinessAction&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">user&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// err usually wrapped in rpc particular message type
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="c1">// so we need abstract real error from wrapper type
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nx">rpcStatus&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">rpc&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Convert&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">rpcStatus&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Type&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="nx">rpc&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Status_Business_Error&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">code&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">rpcStatus&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">GetMeta&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;code&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">msg&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">rpcStatus&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">GetMeta&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;msg&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nf">NewBusinessError&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">code&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">msg&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">cause&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">rpcStatus&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Error&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Wrap&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">cause&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;service unavailable&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">!&lt;/span>&lt;span class="nx">fine&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">ErrUserNotValid&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">user&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kc">nil&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这段示例很有意思。首先，如何处理下游支撑服务返回的异常？支撑服务（例如数据库、缓存、中间件等等）往往没有业务，它们返回的错误就是单纯的错误，需要开发者每时每刻关注和处理。所以，在这里直接包装并返回。于此同时，&lt;code>GetUserById()&lt;/code>的消费方得到了只应该它们关注的&lt;code>cannot perform such operation&lt;/code>，而在用户微服务里，我们得到了完整的调用栈和错误信息。&lt;/p>
+&lt;p>其次，本地的业务检查如果失败，我们将直接返回一个预定义好的&lt;code>ErrUserNotValid&lt;/code>，表示一个业务上的失败。&lt;/p>
+&lt;p>最后，如果涉及进一步的远程&lt;code>RPC&lt;/code>调用，事情会变的稍微麻烦一些。远程的&lt;code>RPC&lt;/code>调用可能有错误，但是错误类型比较复杂。通过&lt;code>RPC&lt;/code>的方式传递错误不如进程内调用那么简单直白，为了能够顺利序列化，很多的&lt;code>RPC&lt;/code>框架都会将错误信息打包成为某种专有的结构，所以，我们需要一些手段从这些专有结构中提取出我们需要的信息出来。&lt;/p>
+&lt;blockquote>
+&lt;p>GRPC 会将错误打包成为&lt;code>google.golang.org/genproto/googleapis/rpc/status&lt;/code>包中的&lt;code>status.Status&lt;/code>结构，&lt;code>status.Status&lt;/code>里包含了&lt;code>Code&lt;/code>、&lt;code>Message&lt;/code>、&lt;code>Details&lt;/code>，我们通常可以约定&lt;code>Code&lt;/code>为&lt;code>10&lt;/code>代表业务错误（10 代表 Aborted），同时将业务码打包进&lt;code>Details&lt;/code>里。&lt;/p>
+&lt;/blockquote>
+&lt;blockquote>
+&lt;p>GraphQL 也有类似的方式，在返回的数据中，除了包含正常数据的&lt;code>data&lt;/code>字段外，还有一个&lt;code>errors&lt;/code>数组字段。一般发生错误时，会通过&lt;code>errors.[].message&lt;/code>提供错误信息供客户端使用，但当我们需要提供业务码信息时，这个字段显然不太适合使用。不过好在，除了&lt;code>errors.[].message&lt;/code>，GraphQL 还提供了&lt;code>errors.[].extensions&lt;/code>结构用于扩展错误信息。于是乎，可以和消费方约定一个业务码所使用的具体字段，例如&lt;code>errors.[].extensions.code&lt;/code>，如此便很好的解决了问题。&lt;/p>
+&lt;/blockquote>
+&lt;blockquote>
+&lt;p>Restful 的方式其实很像是 GraphQL 的方式，由于&lt;code>http&lt;/code>上不提供额外的序列化通道，能用的只有&lt;code>body&lt;/code>这一个选项（用&lt;code>header&lt;/code>？不能够！），所以看起来只能提供&lt;code>{ &amp;quot;data&amp;quot;: {}, &amp;quot;err_code&amp;quot;: &amp;quot;&amp;quot;, &amp;quot;err_msg&amp;quot;: &amp;quot;&amp;quot; }&lt;/code>这样的万能包装。其实大可不必，没有错误的情况下，正常把数据写入&lt;code>body&lt;/code>，当出现业务错误时，只要返回&lt;code>{ &amp;quot;err_code&amp;quot;: &amp;quot;&amp;quot;, &amp;quot;err_msg&amp;quot;: &amp;quot;&amp;quot; }&lt;/code>，&lt;strong>同时把 status code 设置为 400&lt;/strong>即可，这样就能把万能的&lt;code>data&lt;/code>字段解放出来了。如果是一般的错误，例如少参数、参数不允许为空等，这时候不用提供&lt;code>err_code&lt;/code>，只提供&lt;code>err_msg&lt;/code>，&lt;strong>同时把 status code 设置为 500&lt;/strong>即可。一股脑的&lt;code>200&lt;/code>真的不是什么好设计。&lt;/p>
+&lt;/blockquote>
+&lt;p>通过&lt;code>rpc.Convert()&lt;/code>类似的工具函数，我们能从&lt;code>RPC&lt;/code>的&lt;code>error&lt;/code>中拿到原始的结构数据，然后通过判断，确定是否为业务上的错误（所代表的类型），进而将原始的业务错误重新向外扔出，不需要做额外的处理。如果不是业务上的错误，那么就是&lt;strong>bug&lt;/strong>、缺陷或者传输级别的故障，我们仍旧可以通过包装扔出，留下堆栈和详细信息在微服务内。&lt;/p>
+&lt;p>这或多或少的需要一种&lt;strong>统一的设计和约定&lt;/strong>，例如将&lt;code>RPC&lt;/code>错误的类型字段的某个特定 key，约定好专门用于存放业务错误码，否则的话将无法区分“业务错误”和“其它错误”。&lt;/p>
+&lt;p>示例中关于&lt;code>RPC&lt;/code>错误的代码稍显啰嗦，我们其实可以稍微重构一下：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kd">func&lt;/span> &lt;span class="nf">handleRpcError&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span> &lt;span class="kt">error&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">wrapMsg&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="kt">error&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">rpcStatus&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">rpc&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Convert&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">rpcStatus&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Type&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="nx">rpc&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Status_Business_Error&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">code&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">rpcStatus&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">GetMeta&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;code&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">msg&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">rpcStatus&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">GetMeta&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;msg&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nf">NewBusinessError&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">code&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">msg&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">cause&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">rpcStatus&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Error&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Wrap&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">cause&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">wrapMsg&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// in pratice
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kd">func&lt;/span> &lt;span class="nf">FindUserById&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">userId&lt;/span> &lt;span class="kt">string&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="kt">error&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// ...
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nx">fine&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">rpc&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">BusinessAction&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">user&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nf">handleRpcError&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;service unavailable&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>那么，如果是更靠近最终用户的“边界”，又该如何处理呢？&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="面向用户的边界">
+面向用户的边界
+&lt;/h3>
+&lt;/div>
+&lt;p>很明确的就是，首先用户很大程度上是关心&lt;strong>业务码&lt;/strong>的，至少用户使用的客户端是关心的；其次，用户是不关心什么连接字符串错误、&lt;code>userId is required&lt;/code>等等这些错误的。所以，&lt;strong>业务错误需要明确给出，前置检查错误只给开发者，其它不可预料的错误全部简单转换为“服务当前不可用”&lt;/strong>。&lt;/p>
+&lt;p>有几个简单的观点：&lt;/p>
+&lt;ul>
+&lt;li>有业务码错误的才需要对用户显示信息，其它的一律可显示为视为&lt;strong>出错了，请稍后重试&lt;/strong>&lt;/li>
+&lt;li>有业务码的，说明是非技术的错误，其他一切要么是&lt;strong>bug&lt;/strong>，需要开发人员在上线前处理完毕，要么是运行错误，比如数据库异常。需要告诉用户的只有&lt;strong>出错了，请稍后重试&lt;/strong>，不会也不能再告诉更多&lt;/li>
+&lt;li>身份证号格式不对，电话号格式不对，这种错误在严格意义上算是&lt;strong>bug&lt;/strong>，应该在调用&lt;code>API&lt;/code>前就检验好的。如果设计不那么严格，可以适当的返回业务码帮助一下，但也只是友情帮助，该客户端做的验证还是得做的&lt;/li>
+&lt;/ul>
+&lt;p>我们来看最后一个例子：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kn">import&lt;/span> &lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;github.com/pkg/errors&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">var&lt;/span> &lt;span class="nx">ServiceUnavailableMessage&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="s">&amp;#34;service unavailable&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">type&lt;/span> &lt;span class="nx">LoginReq&lt;/span> &lt;span class="kd">struct&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Username&lt;/span> &lt;span class="kt">string&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Password&lt;/span> &lt;span class="kt">string&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">func&lt;/span> &lt;span class="nf">Login&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span> &lt;span class="nx">context&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Context&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">req&lt;/span> &lt;span class="nx">LoginReq&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="nx">model&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Credential&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">error&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">req&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Username&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s">&amp;#34;&amp;#34;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">New&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;username is required&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">req&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Password&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="s">&amp;#34;&amp;#34;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kc">nil&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">New&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;password is required&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// FindByUsername
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="c1">// maybe got business error: &amp;#39;[10011] user doesn&amp;#39;t exists&amp;#39;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nx">user&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">rpc&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">UserService&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">FindByUsername&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Username&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nf">handleRpcError&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">ServiceUnavailableMessage&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// SignIn
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="c1">// maybe got business error: &amp;#39;[20001] account is disabled&amp;#39;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="c1">// maybe got business error: &amp;#39;[20002] password is incorrect&amp;#39;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="c1">// maybe got business error: &amp;#39;[20003] login place abnormal&amp;#39;
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nx">cred&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">rpc&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">AccountService&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">SignIn&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">user&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Id&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">req&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Password&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nf">handleRpcError&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">ServiceUnavailableMessage&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">credential&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="o">&amp;amp;&lt;/span>&lt;span class="nx">model&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Credential&lt;/span>&lt;span class="p">{}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">credential&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Load&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">cred&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">errors&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Wrap&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">ServiceUnavailableMessage&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">credential&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kc">nil&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这是非常常见的一种&lt;code>API&lt;/code>服务的写法，我省去了一些不必要的细节，例如&lt;code>Routing&lt;/code>或者&lt;code>Response&lt;/code>相关的东西。其实和普通的微服务实现没有什么两样，除了几个小细节：&lt;/p>
+&lt;ul>
+&lt;li>对参数的校验还是必要的，不能因为微服务校验过参数，消费方就不做校验了&lt;/li>
+&lt;li>除了参数校验的错误，仍然需要对下游服务返回的业务错误同步的向上返回&lt;/li>
+&lt;li>除了参数错误和业务错误，其它的错误会包装成&lt;code>service unavailable&lt;/code>，不向用户泄露任何的技术细节&lt;/li>
+&lt;/ul>
+&lt;p>通常，在这种类型的服务中，会有一个类似中间件的东西，统一的处理一切的错误（或者，建议自己实现一个），或者叫全局的错误处理函数、生命周期钩子等等，总之在我们的&lt;code>Login()&lt;/code>函数返回错误后，能够以统一的方式响应给用户端，那具体会是什么样呢？&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// golang
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="kd">type&lt;/span> &lt;span class="nx">UserError&lt;/span> &lt;span class="kd">struct&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ErrCode&lt;/span> &lt;span class="kt">string&lt;/span> &lt;span class="s">`json:&amp;#34;err_code&amp;#34;`&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ErrMsg&lt;/span> &lt;span class="kt">string&lt;/span> &lt;span class="s">`json:&amp;#34;err_msg&amp;#34;`&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">func&lt;/span> &lt;span class="nf">handleGlobalError&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span> &lt;span class="nx">HttpContext&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="kt">error&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">e&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">ok&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">err&lt;/span>&lt;span class="p">.(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="nx">BusinessError&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="nx">ok&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ue&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="o">&amp;amp;&lt;/span>&lt;span class="nx">UserError&lt;/span>&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ErrCode&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="nx">e&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Code&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ErrMsg&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="nx">e&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Msg&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ctx&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Response&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">WriteJson&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ue&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ctx&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Response&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">SetStatus&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">400&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span> &lt;span class="k">else&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ue&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="o">&amp;amp;&lt;/span>&lt;span class="nx">UserError&lt;/span>&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ErrMsg&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="nx">err&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Error&lt;/span>&lt;span class="p">(),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ctx&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Response&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">WriteJson&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ue&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ctx&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Response&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">SetStatus&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">500&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>当然，这个函数只是概念上的解释，具体到每一个不同的场景会有不同的&lt;code>API&lt;/code>和方式。实际上，如果能够支持这种全局错误处理，那么&lt;code>credential.Load(cred)&lt;/code>产生的错误实际都不用&lt;code>Wrap&lt;/code>，只需在处理全局错误的时候，直接将非业务错误的&lt;code>UserError&lt;/code>的&lt;code>ErrMsg&lt;/code>设置成&lt;code>service unavailable&lt;/code>就可以了，这也避免了处处都&lt;code>errors.Wrap(err, ServiceUnavailableMessage)&lt;/code>，让简洁性更进一步。&lt;/p>
+&lt;p>如此，世界得以清静。&lt;/p>
+&lt;p>（完）&lt;/p></content><category scheme="https://blog.shinetechsoftware.org/authors/lurongkai" term="lurongkai" label="lurongkai"/><category scheme="https://blog.shinetechsoftware.org/tags/Golang" term="Golang" label="Golang"/><category scheme="https://blog.shinetechsoftware.org/tags/Microservice" term="Microservice" label="Microservice"/></entry></feed>
