@@ -51,7 +51,7 @@ enableRobotsTXT = true
   term = ["HTML", "ATOM"]
 
 [params]
-  subtitle = "Team Blog"
+  subtitle = "Open Community Team Blog"
   description = "Shinetech Software Open Community Team Blog"
   keywords = ["shinetech software", "open community", "team blog"]
   images = []
