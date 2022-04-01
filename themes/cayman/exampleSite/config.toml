@@ -1,14 +1,14 @@
-baseURL = 'https://blog.shinetechsoftware.org/'
-languageCode = 'en-us'
+baseURL = "https://example.com"
+languageCode = "en-us"
 defaultContentLanguage = "en"
-title = 'Blog'
-theme = "cayman"
+title = "Cayman"
+theme = "cayman-hugo-theme"
 
 # Google analytics
-# googleAnalytics = "UA-123456789-1"
+googleAnalytics = "UA-123456789-1"
 
 # Disqus comments
-disqusShortname = "shinetech-software-blog"
+disqusShortname = "yourdiscussshortname"
 
 # Syntax highlighting
 pygmentsCodefences = true
@@ -18,15 +18,19 @@ pygmentsStyle = "pygments"
   tag = "tags"
 
 [permalinks]
-  post = "/:year/:month/:filename/"
+  post = "/:filename/"
 
 [params]
-  project_name = "Shinetech Software"
-  project_tagline = "Open Community Team Blog"
+  # Header text, can be markdown
+  project_name = "Cayman Hugo Theme"
+  project_tagline = "A clean, responsive Hugo theme, ported from the original Jekyll Cayman theme"
+
+  # Date format for post list and single pages
+  # For more date formats see https://gohugo.io/functions/format/
   dateFormat = "2006-01-02"
 
   # Footer text, can be markdown
-  footer = "* [GitHub](https://github.com/shinetechopen)\n * [Shinetech Software](https://www.shinetechsoftware.com/)"
+  footer = "Made with [Hugo](https://gohugo.io/). Themed by [Cayman](https://github.com/zwbetz-gh/cayman-hugo-theme). Deployed to [Netlify](https://www.netlify.com/)."
 
   # If true, the CSS/JS for Katex math typesetting are enabled
   katex = true
@@ -65,8 +69,8 @@ pygmentsStyle = "pygments"
     url = "/tags/"
     weight = 2
   [[menu.nav]]
-    name = "GitHub"
-    url = "https://github.com/shinetechopen"
+    name = "About"
+    url = "/about/"
     weight = 3
   [[menu.nav]]
     name = "RSS"
