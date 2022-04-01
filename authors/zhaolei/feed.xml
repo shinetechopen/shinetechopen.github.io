@@ -1,0 +1,714 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://gohugo.io/" version="0.96.0">Hugo</generator><title>Zhaolei on Shinetech Software</title><subtitle>Open Community Team Blog</subtitle><link href="https://blog.shinetechsoftware.org/authors/zhaolei/" rel="alternate" type="text/html" title="HTML"/><link href="https://blog.shinetechsoftware.org/authors/zhaolei/feed.xml" rel="self" type="application/atom+xml" title="Atom"/><updated>2022-04-01T07:58:29+00:00</updated><id>https://blog.shinetechsoftware.org/authors/zhaolei/</id><entry><title>微信小程序开发简介</title><link href="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/" rel="alternate" type="text/html" hreflang="en"/><id>https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/</id><author><name>Larry Zhao</name></author><published>2019-05-06T15:44:07+08:00</published><updated>2019-05-06T15:44:07+08:00</updated><content type="html">
+&lt;div class="gblog-toc gblog-toc__level--3">
+&lt;nav id="TableOfContents">
+&lt;ul>
+&lt;li>
+&lt;ul>
+&lt;li>&lt;a href="#小程序介绍">小程序介绍&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#微信小程序是什么">微信小程序是什么&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#微信小程序的特点">微信小程序的特点&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#框架浅析">框架浅析&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#项目结构">项目结构&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#架构解析">架构解析&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#编译过程">编译过程&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#生命周期">生命周期&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#微信小程序开发工具">微信小程序开发工具&lt;/a>
+&lt;ul>
+&lt;li>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#坑">坑&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/nav>
+&lt;hr />
+&lt;/div>
+&lt;p>&lt;a
+class="gblog-markdown__link"
+href="https://cdn.devops.shinetechsoftware.org/training/190506-zhaolei-wx-miniprogram.mp4"
+>演讲视频链接&lt;/a>&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h2 id="小程序介绍">
+小程序介绍
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#小程序介绍" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 小程序介绍" href="#%e5%b0%8f%e7%a8%8b%e5%ba%8f%e4%bb%8b%e7%bb%8d">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h2>
+&lt;/div>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="微信小程序是什么">
+微信小程序是什么
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#微信小程序是什么" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 微信小程序是什么" href="#%e5%be%ae%e4%bf%a1%e5%b0%8f%e7%a8%8b%e5%ba%8f%e6%98%af%e4%bb%80%e4%b9%88">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;ul>
+&lt;li>移动端应用，运行依赖于微信客户端提供的宿主环境&lt;/li>
+&lt;li>同时包含 Native 和微信自身的组件及 API&lt;/li>
+&lt;li>使用特有的语言、框架进行开发&lt;/li>
+&lt;li>提供了 IDE 及 CLI，用来开发、调试、测试、发布等&lt;/li>
+&lt;/ul>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="微信小程序的特点">
+微信小程序的特点
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#微信小程序的特点" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 微信小程序的特点" href="#%e5%be%ae%e4%bf%a1%e5%b0%8f%e7%a8%8b%e5%ba%8f%e7%9a%84%e7%89%b9%e7%82%b9">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h4 id="轻量易得">
+轻量易得
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#轻量易得" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 轻量易得" href="#%e8%bd%bb%e9%87%8f%e6%98%93%e5%be%97">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h4>
+&lt;/div>
+&lt;p>小程序无需打包，无需下载安装。可以通过微信（或企业微信）的小程序入口唤起、公众号自定义菜单或模板消息、 App 分享消息卡片唤起等多个场景（&lt;a
+class="gblog-markdown__link"
+href="https://developers.weixin.qq.com/miniprogram/dev/reference/scene-list.html"
+>场景值&lt;/a>）唤起。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h4 id="功能丰富">
+功能丰富
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#功能丰富" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 功能丰富" href="#%e5%8a%9f%e8%83%bd%e4%b8%b0%e5%af%8c">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h4>
+&lt;/div>
+&lt;p>同时兼备了微信和原生的多种能力。微信如：拍摄、录音、语音识别、二维码、地图、支付、分享、卡券、发票等。原生如：Wi-Fi、蓝牙、联系人、电话、剪切板、网络、加速计、陀螺仪等。&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h4 id="微信生态">
+微信生态
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#微信生态" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 微信生态" href="#%e5%be%ae%e4%bf%a1%e7%94%9f%e6%80%81">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h4>
+&lt;/div>
+&lt;ul>
+&lt;li>
+&lt;p>小程序与其他移动应用、网站应用及公众号统一并共享用户信息&lt;/p>
+&lt;p>小程序绑定微信开放平台帐号后，可与帐号下的其他移动应用、网站应用及公众号打通，通过 UnionID 机制满足在多个应用和公众号之间统一用户帐号的需求。&lt;/p>
+&lt;p>场景：可以用在支持微信注册及登录的应用中&lt;/p>
+&lt;blockquote>
+&lt;p>&lt;a
+class="gblog-markdown__link"
+href="https://developers.weixin.qq.com/miniprogram/introduction/#%E5%B0%8F%E7%A8%8B%E5%BA%8F%E7%BB%91%E5%AE%9A%E5%BE%AE%E4%BF%A1%E5%BC%80%E6%94%BE%E5%B9%B3%E5%8F%B0%E5%B8%90%E5%8F%B7"
+>&lt;strong>UnionID 机制说明：&lt;/strong>&lt;/a> 如果开发者拥有多个移动应用、网站应用、和公众帐号（包括小程序），可通过 UnionID 来区分用户的唯一性，因为只要是同一个微信开放平台帐号下的移动应用、网站应用和公众帐号（包括小程序），用户的 UnionID 是唯一的。换句话说，同一用户，对同一个微信开放平台下的不同应用，UnionID 是相同的。用户的 UnionID 可通过调用“获取用户信息”接口获取。&lt;/p>
+&lt;/blockquote>
+&lt;blockquote>
+&lt;p>&lt;strong>Tips&lt;/strong>&lt;br>
+如何获取 UnionID？&lt;/p>
+&lt;/blockquote>
+&lt;/li>
+&lt;/ul>
+&lt;ul>
+&lt;li>
+&lt;p>小程序与其他移动应用、网站应用及公众号相互跳转&lt;/p>
+&lt;p>&lt;img
+src="mp-jump.png"
+alt="小程序与其他应用相互跳转"
+/>&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;a
+class="gblog-markdown__link"
+href="https://developers.weixin.qq.com/miniprogram/introduction/#%E5%85%AC%E4%BC%97%E5%8F%B7%E5%85%B3%E8%81%94%E5%B0%8F%E7%A8%8B%E5%BA%8F"
+>公众号 - 小程序&lt;/a>&lt;/p>
+&lt;p>需要在公众号的微信公众平台&lt;code>小程序管理&lt;/code>中关联小程序。公众号关联小程序后，可在图文消息、自定义菜单、模板消息等功能中跳转小程序。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>小程序 - 公众号&lt;/p>
+&lt;p>需要在小程序的微信公众平台中设置相关公众号。公众号会在小程序的关于页显示。从而实现引流的目的。&lt;/p>
+&lt;blockquote>
+&lt;p>&lt;strong>Tips&lt;/strong>&lt;br>
+使用场景：由于小程序仅能在某些用户触发如支付、提交表单等交互行为时才能推送模板消息。可将重要消息以模板消息的形式推送到关联了小程序的服务号（前提是用户订阅了此服务号）。再从消息跳转到小程序某页面。&lt;/p>
+&lt;/blockquote>
+&lt;/li>
+&lt;li>
+&lt;p>App - 小程序&lt;/p>
+&lt;p>有两种方法：&lt;/p>
+&lt;p>需要发起分享的 App 与小程序属于同一微信开放平台帐号。可以分享小程序类型消息至微信会话，通过点击分享卡片跳转小程序。&lt;/p>
+&lt;p>需要在同一微信开放平台帐号，或者发起关联小程序操作。移动应用可以直接拉起小程序。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>小程序 - App&lt;/p>
+&lt;p>小程序不能打开任意 APP，只能 &lt;code>跳回&lt;/code>到由上述两种方法唤起小程序的 APP。且需要用户主动触发才能打开 APP，所以不由 API 来调用，需要用 &lt;code>open-type&lt;/code> 的值设置为 &lt;code>launchApp&lt;/code> 的 &lt;code>&amp;lt;button&amp;gt;&lt;/code> 组件的点击来触发。&lt;/p>
+&lt;blockquote>
+&lt;p>&lt;strong>Tips&lt;/strong>&lt;br>
+使用场景：分享到微信的消息类型，可以是比链接功能更强大的小程序页面。而且，如果分享到微信的是链接类型。链接默认会在微信内置浏览器中打开。而微信内置浏览器并不支持 App 跳转。但如果分享的是小程序类型，可以实现这一功能。&lt;/p>
+&lt;/blockquote>
+&lt;/li>
+&lt;li>
+&lt;p>小程序 - Web 页面&lt;/p>
+&lt;p>需要先将要访问的 web 页面域名添加到小程序微信公众平台的业务域名中。然后在小程序组件&lt;web-view>中访问页面，并且可以通过 &lt;code>JSSDK&lt;/code> 与小程序通信。&lt;/p>
+&lt;blockquote>
+&lt;p>&lt;strong>Tips&lt;/strong>&lt;br>
+如何保持登录状态？可以将 token 通过 url 参数传入；也可以搭建一个中间服务，传入要跳转的 url 和 code，中间服务通过 code 得到 session，再返回 302 重定向地址&lt;/p>
+&lt;/blockquote>
+&lt;/li>
+&lt;li>
+&lt;p>Web 页面 - 小程序&lt;/p>
+&lt;p>Web 页面可使用微信 JSSDK 提供的接口返回小程序页面。并可通过 postMessage 向小程序通信。&lt;/p>
+&lt;p>场景：Web 页面能够嵌入小程序，提供了极大的灵活性。我们可以复用已有的移动端 H5 页面。可以将一些变更频繁的页面通过 web-view 实现，达到快速部署的目的。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>小程序间跳转&lt;/p>
+&lt;p>需要先在配置文件中声明需要跳转的小程序 appId 列表。使用 &lt;code>wx.navigateToMiniProgram&lt;/code> 接口跳转到其他小程序，再通过&lt;code>wx.navigateBackMiniProgram&lt;/code>跳回&lt;/p>
+&lt;p>场景：可以是同一公司的多个功能独立、彼此关联的小程序&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;blockquote>
+&lt;p>&lt;strong>Tips&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>小程序不能分享朋友圈&lt;/li>
+&lt;li>不支持消息推送&lt;/li>
+&lt;/ul>
+&lt;/blockquote>
+&lt;/li>
+&lt;/ul>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h4 id="新的框架">
+新的框架
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#新的框架" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 新的框架" href="#%e6%96%b0%e7%9a%84%e6%a1%86%e6%9e%b6">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h4>
+&lt;/div>
+&lt;p>前端怎么又岀新框架了&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h2 id="框架浅析">
+框架浅析
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#框架浅析" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 框架浅析" href="#%e6%a1%86%e6%9e%b6%e6%b5%85%e6%9e%90">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h2>
+&lt;/div>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="项目结构">
+项目结构
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#项目结构" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 项目结构" href="#%e9%a1%b9%e7%9b%ae%e7%bb%93%e6%9e%84">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;p>小程序由配置代码 JSON 文件、模板代码 WXML 文件、样式代码 WXSS 文件以及逻辑代码 JavaScript 文件组成。&lt;/p>
+&lt;p>小程序包含一个描述整体程序的 app 和多个描述各自页面的 page。&lt;/p>
+&lt;p>&lt;img
+src="mp-structure.png"
+alt="mp-structure"
+/>&lt;/p>
+&lt;p>一个小程序主体部分由三个文件组成，必须放在项目的根目录，如下：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>文件&lt;/th>
+&lt;th>必填&lt;/th>
+&lt;th>作用&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>app.js&lt;/td>
+&lt;td>是&lt;/td>
+&lt;td>小程序逻辑&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>app.json&lt;/td>
+&lt;td>是&lt;/td>
+&lt;td>全局配置（包括了小程序的所有页面路径、界面表现、网络超时时间、底部 tab 等）&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>project.config.json&lt;/td>
+&lt;td>是&lt;/td>
+&lt;td>开发工具配置（例如界面颜色、编译配置等）&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>app.wxss&lt;/td>
+&lt;td>否&lt;/td>
+&lt;td>小程序公共样式表&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>一个小程序页面由四个文件组成，分别是：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>文件&lt;/th>
+&lt;th>必填&lt;/th>
+&lt;th>作用&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>js&lt;/td>
+&lt;td>是&lt;/td>
+&lt;td>页面逻辑&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>wxml&lt;/td>
+&lt;td>是&lt;/td>
+&lt;td>页面结构&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>wxss&lt;/td>
+&lt;td>否&lt;/td>
+&lt;td>页面样式表&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>json&lt;/td>
+&lt;td>否&lt;/td>
+&lt;td>页面配置&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="架构解析">
+架构解析
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#架构解析" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 架构解析" href="#%e6%9e%b6%e6%9e%84%e8%a7%a3%e6%9e%90">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;p>小程序的运行环境分成渲染层（以下用 AppView 代指）和逻辑层（以下用 AppService 代指）。分别由 2 个线程管理：AppView 的界面使用了 WebView 进行渲染；AppService 采用 JsCore 线程运行 JS 脚本。多个界面，对应多个 WebView 线程。WXML 模板和 WXSS 样式工作在 AppView，JS 脚本工作在 AppService。AppService 和 AppView 通过 WeixinJSBridge 经由微信客户端进行通讯。AppService 把数据变化通知到视图层，触发视图层页面更新，视图层把触发的事件通知到 AppService 进行业务处理。&lt;/p>
+&lt;p>WeixinJSBridge 主要接口：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="kd">var&lt;/span> &lt;span class="nx">t&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 调用Native API
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nx">invoke&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="kd">function&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">e&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">t&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">n&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">WeixinJSBridge&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">invoke&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">e&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">t&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">n&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 订阅Native消息
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nx">on&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="kd">function&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">e&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">t&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">WeixinJSBridge&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">on&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">e&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">t&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 向AppView/AppService发布事件
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nx">publish&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="kd">function&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">e&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">t&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">n&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">WeixinJSBridge&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">publish&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">e&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">t&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">n&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 订阅AppView/AppService消息
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nx">subscribe&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="kd">function&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">e&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">t&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">WeixinJSBridge&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">subscribe&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">e&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">t&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;img
+src="mp-core-2.png"
+alt="架构图"
+/>&lt;/p>
+&lt;blockquote>
+&lt;p>&lt;strong>Tips&lt;/strong>&lt;br>
+为了解决管控与安全问题,提供一个沙箱环境,阻止在 webview 上执行诸如跳转页面、操作 DOM、动态执行脚本的开放性接口。DOM 操作都是基于数据驱动&lt;/p>
+&lt;/blockquote>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="编译过程">
+编译过程
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#编译过程" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 编译过程" href="#%e7%bc%96%e8%af%91%e8%bf%87%e7%a8%8b">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h4 id="wxml">
+WXML
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#wxml" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor WXML" href="#wxml">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h4>
+&lt;/div>
+&lt;p>在本地开发工具或者上传服务端后，工具 wcc 会把所有 wxml 转换成一个 JS 函数 &lt;code>$gwx&lt;/code> ，形如：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="nx">$gwx&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="kd">function&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">path&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="kd">function&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">data&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="p">{};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>传入相应的页面路径，执行函数 &lt;code>$gwx('/page/index/index')&lt;/code> ，会返回一个新的函数，这个函数相当于这个页面 Virtual Dom 的骨架。此函数接受一个参数 &lt;code>data&lt;/code> ,而这个 &lt;code>data&lt;/code> 就是这个页面 Virtual Dom 的血肉。&lt;code>$gwx('/page/index/index')(data)&lt;/code>再次调用，就会生成这个页面的 Virtual Dom，形如：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-javascript" data-lang="javascript">&lt;span class="line">&lt;span class="cl">&lt;span class="kd">var&lt;/span> &lt;span class="nx">v_tree&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">tag&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;wx-page&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">children&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">tag&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;wx-view&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">attr&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">{&lt;/span> &lt;span class="kr">class&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;page-body&amp;#39;&lt;/span> &lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">children&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">tag&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;wx-textarea&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">attr&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">{&lt;/span> &lt;span class="nx">autoHeight&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="kc">true&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">bindblur&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;bindTextAreaBlur&amp;#39;&lt;/span> &lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">children&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[],&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">raw&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">{},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">generics&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">{}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">],&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">raw&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">{},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">generics&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">{}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;code>$gwx&lt;/code>会随其他辅助脚本一起嵌入到&lt;code>page-frame.html&lt;/code>页面中。&lt;code>page-frame.html&lt;/code>是每次小程序需要新建页面时，WebView 要加载的页面，然后再根据 path 和 data ，使用 Exparser 渲染出页面。&lt;/p>
+&lt;p>在使用 setData 更新数据时，会将 setData 合并到 data，并重新生成 Virtual Dom，比较新旧节点树，更新页面。&lt;/p>
+&lt;p>&lt;img
+src="mp-v-dom.png"
+alt="v-dom"
+/>&lt;/p>
+&lt;blockquote>
+&lt;p>&lt;strong>Tips&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>不要频繁的去 setData&lt;/li>
+&lt;li>不要每次 setData 都传递大量新数据&lt;/li>
+&lt;li>使用 myData 存储与页面渲染无关的数据&lt;/li>
+&lt;/ul>
+&lt;/blockquote>
+&lt;p>&lt;strong>WXSS&lt;/strong>&lt;/p>
+&lt;p>同样是使用一个转换工具 wcsc，将 WXSS 转换成 CSS。而其中主要的工作是把长度单位&lt;code>rpx(responsive pixel)&lt;/code>根据不同机型转换成&lt;code>px&lt;/code>。&lt;/p>
+&lt;p>&lt;img
+src="mp-wcsc.png"
+alt="mp-wcsc"
+/>&lt;/p>
+&lt;p>&lt;strong>JS&lt;/strong>&lt;/p>
+&lt;p>将所有 js 文件合并到 appservice.js 中，在小程序启动时依次执行，直接加载所有页面逻辑代码进内存。但加载时会使用 define 函数封装，调用时将包括 window,document 之后的参数赋空值。&lt;/p>
+&lt;p>&lt;img
+src="mp-js.png"
+alt="mp-js"
+/>&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="nx">define&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s2">&amp;#34;pages/logs/logs.js&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kd">function&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">require&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">module&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">exports&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nb">window&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nb">document&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">frames&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">self&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">location&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">navigator&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">localStorage&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">history&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">Caches&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">screen&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">alert&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">confirm&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">prompt&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">fetch&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">XMLHttpRequest&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">WebSocket&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">webkit&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">WeixinJSCore&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">Reporter&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">print&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">URL&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">DOMParser&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">upload&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">preview&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">build&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">showDecryptedInfo&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">syncMessage&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">checkProxy&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">showSystemInfo&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">openVendor&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">openToolsLog&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">showRequestInfo&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">help&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">showDebugInfoTable&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">closeDebug&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">showDebugInfo&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">__global&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="nx">WeixinJSBridge&lt;/span>&lt;span class="p">){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s1">&amp;#39;use strict&amp;#39;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nx">Page&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">data&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">logs&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">onLoad&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="kd">function&lt;/span> &lt;span class="nx">onLoad&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="nx">env&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">require&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">module&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">exports&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">window&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">document&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">frames&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">self&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">location&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">navigator&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">localStorage&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">history&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Caches&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">screen&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">alert&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">confirm&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">prompt&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">fetch&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">XMLHttpRequest&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">WebSocket&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">webkit&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">WeixinJSCore&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Reporter&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">print&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">URL&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">DOMParser&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">upload&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">preview&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">build&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">showDecryptedInfo&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">syncMessage&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">checkProxy&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">showSystemInfo&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">openVendor&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">openToolsLog&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">showRequestInfo&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">help&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">showDebugInfoTable&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">closeDebug&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">showDebugInfo&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">__global&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">WeixinJSBridge&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">console&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">log&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">env&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;code>console.log:&lt;/code>&lt;/p>
+&lt;p>&lt;img
+src="mp-console-log.png"
+alt="mp-console-log"
+/>&lt;/p>
+&lt;blockquote>
+&lt;p>&lt;strong>Tips&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>window,document 等都是 undefined。因为 AppService 只能执行业务逻辑代码，并没有 DOM 和 BOM 可以操作。&lt;/li>
+&lt;li>同时，我们要特别留意一点，所有页面的脚本逻辑都跑在同一个 JsCore 线程，页面使用 setTimeout 或者 setInterval 的定时器，然后跳转到其他页面时，这些定时器并没有被清除，需要开发者自己在页面离开的时候进行清理。&lt;/li>
+&lt;/ul>
+&lt;/blockquote>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h3 id="生命周期">
+生命周期
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#生命周期" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 生命周期" href="#%e7%94%9f%e5%91%bd%e5%91%a8%e6%9c%9f">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h3>
+&lt;/div>
+&lt;p>&lt;strong>应用生命周期&lt;/strong>&lt;/p>
+&lt;p>初次进入小程序的时候，微信客户端初始化好宿主环境，同时从网络下载或者从本地缓存中拿到小程序的代码包，把它注入到宿主环境，初始化完毕后，微信客户端就会给 App 实例派发 onLaunch 事件，App 构造器参数所定义的 onLaunch 方法会被调用。&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>属性&lt;/th>
+&lt;th>类型&lt;/th>
+&lt;th>描述&lt;/th>
+&lt;th>触发时机&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>onLaunch&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>生命周期函数&amp;ndash;监听小程序初始化&lt;/td>
+&lt;td>当小程序初始化完成时，会触发 onLaunch（全局只触发一次）&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>onShow&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>生命周期函数&amp;ndash;监听小程序显示&lt;/td>
+&lt;td>当小程序启动，或从后台进入前台显示，会触发 onShow&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>onHide&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>生命周期函数&amp;ndash;监听小程序隐藏&lt;/td>
+&lt;td>当小程序从前台进入后台，会触发 onHide&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>onError&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>错误监听函数&lt;/td>
+&lt;td>当小程序发生脚本错误，或者 api 调用失败时，会触发 onError 并带上错误信息&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>onPageNotFound&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>页面不存在监听函数&lt;/td>
+&lt;td>当小程序出现要打开的页面不存在的情况，会带上页面信息回调该函数，详见下文&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>其他&lt;/td>
+&lt;td>Any&lt;/td>
+&lt;td>&lt;/td>
+&lt;td>开发者可以添加任意的函数或数据到 Object 参数中，用 &lt;code>this&lt;/code> 可以访问&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>&lt;img
+src="mp-app-lifecycle.png"
+alt="mp-app-lifecycle"
+/>&lt;/p>
+&lt;p>&lt;strong>页面生命周期&lt;/strong>&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>属性&lt;/th>
+&lt;th>类型&lt;/th>
+&lt;th>描述&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>data&lt;/td>
+&lt;td>Object&lt;/td>
+&lt;td>页面的初始数据&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>onLoad&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>生命周期回调—监听页面加载。可获取打开当前页面路径中的参数&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>onShow&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>生命周期回调—监听页面显示&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>onReady&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>生命周期回调—监听页面初次渲染完成&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>onHide&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>生命周期回调—监听页面隐藏&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>onUnload&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>生命周期回调—监听页面卸载&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>onPullDownRefresh&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>监听用户下拉动作&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>onReachBottom&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>页面上拉触底事件的处理函数&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>onShareAppMessage&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>用户点击右上角转发&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>onPageScroll&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>页面滚动触发事件的处理函数&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>onTabItemTap&lt;/td>
+&lt;td>Function&lt;/td>
+&lt;td>当前是 tab 页时，点击 tab 时触发&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>其他&lt;/td>
+&lt;td>Any&lt;/td>
+&lt;td>开发者可以添加任意的函数或数据到 &lt;code>Object&lt;/code> 参数中，在页面的函数中用 &lt;code>this&lt;/code> 可以访问&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>&lt;img
+src="page-lifecycle.png"
+alt="mp-page-lifecycle"
+/>&lt;/p>
+&lt;ol>
+&lt;li>&lt;strong>AppView&lt;/strong> 初始化。初始化完成后向 AppService 发送&lt;code>初始化完成信号&lt;/code>，然后进入&lt;code>等待状态&lt;/code>，等待 AppService 提供&lt;code>初始化数据&lt;/code>。&lt;/li>
+&lt;li>&lt;strong>AppService&lt;/strong> 初始化。初始化完成后调用自定义的 onLoad 和 onShow，然后等待 AppView 的&lt;code>初始化完成信号&lt;/code>。onLoad 是只会首次渲染的时候执行一次，onShow 每次界面切换都会执行。&lt;/li>
+&lt;li>&lt;strong>AppService&lt;/strong> 接收到 AppView 的&lt;code>初始化完成信号&lt;/code>后，将&lt;code>初始化数据&lt;/code>发送给 AppView，等待 AppView 完成初次渲染。&lt;/li>
+&lt;li>&lt;strong>AppView&lt;/strong> 收到 AppService 提供的&lt;code>初始化数据&lt;/code>后，渲染小程序界面，渲染完毕后，发送&lt;code>首次渲染完成信号&lt;/code>给 AppService，并将页面展示给用户。&lt;/li>
+&lt;li>&lt;strong>AppService&lt;/strong> 收到 AppView 发送来的&lt;code>首次渲染完成信号&lt;/code>后，就进入激活状态即程序的正常运行状态，并调用自定义的 onReady。此状态下可以通过 this.setData 函数发送数据给 AppView 进行局部渲染，更新页面。&lt;/li>
+&lt;li>&lt;strong>AppView&lt;/strong> 一直等待 AppService 通过 this.setdata 函数发送来的数据。只要收到，就进行局部渲染，更新页面。&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img
+src="mp-page-lifecycle.png"
+alt="生命周期"
+/>&lt;/p>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h2 id="微信小程序开发工具">
+微信小程序开发工具
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#微信小程序开发工具" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 微信小程序开发工具" href="#%e5%be%ae%e4%bf%a1%e5%b0%8f%e7%a8%8b%e5%ba%8f%e5%bc%80%e5%8f%91%e5%b7%a5%e5%85%b7">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h2>
+&lt;/div>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h4 id="框架选择">
+框架选择
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#框架选择" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 框架选择" href="#%e6%a1%86%e6%9e%b6%e9%80%89%e6%8b%a9">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h4>
+&lt;/div>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>框架&lt;/th>
+&lt;th>contributor&lt;/th>
+&lt;th>npm&lt;/th>
+&lt;th>语法&lt;/th>
+&lt;th>TypeScript&lt;/th>
+&lt;th>star&lt;/th>
+&lt;th>多端复用&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>native&lt;/td>
+&lt;td>tencent&lt;/td>
+&lt;td>不支持&lt;/td>
+&lt;td>&lt;/td>
+&lt;td>支持&lt;/td>
+&lt;td>&lt;/td>
+&lt;td>微信小程序&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>wepy&lt;/td>
+&lt;td>tencent&lt;/td>
+&lt;td>支持&lt;/td>
+&lt;td>Vuejs-style&lt;/td>
+&lt;td>支持&lt;/td>
+&lt;td>17k&lt;/td>
+&lt;td>微信小程序&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>mpvue&lt;/td>
+&lt;td>美团点评&lt;/td>
+&lt;td>支持&lt;/td>
+&lt;td>Vuejs&lt;/td>
+&lt;td>支持&lt;/td>
+&lt;td>17k&lt;/td>
+&lt;td>微信小程序/H5&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>taro&lt;/td>
+&lt;td>京东&lt;/td>
+&lt;td>支持&lt;/td>
+&lt;td>Reactjs&lt;/td>
+&lt;td>支持&lt;/td>
+&lt;td>18k&lt;/td>
+&lt;td>微信小程序/H5/RN/其他小程序&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>omi&lt;/td>
+&lt;td>tencent&lt;/td>
+&lt;td>支持&lt;/td>
+&lt;td>React-style&lt;/td>
+&lt;td>支持&lt;/td>
+&lt;td>8.6k&lt;/td>
+&lt;td>微信小程序/H5/桌面 Web&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;div class="gblog-post__anchorwrap">
+&lt;h2 id="坑">
+坑
+&lt;a data-clipboard-text="https://blog.shinetechsoftware.org/posts/2019/05/mimiprogram-intro/#坑" class="gblog-post__anchor gblog-post__anchor--right clip" aria-label="Anchor 坑" href="#%e5%9d%91">
+&lt;svg class="icon gblog_link">&lt;use xlink:href="#gblog_link">&lt;/use>&lt;/svg>
+&lt;/a>
+&lt;/h2>
+&lt;/div>
+&lt;ul>
+&lt;li>
+&lt;p>package &amp;amp; subPackages&lt;br>
+单包最大 2M;所有包最大 8M&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>wx.request&lt;br>
+statusCode 无论是多少，都会进入 success&lt;br>
+默认是 json 格式，特殊字符会导致解析失败&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>HTTPS&lt;br>
+证书验证 &lt;a
+class="gblog-markdown__link"
+href="https://myssl.com/ssl.html"
+>https://myssl.com/ssl.html&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>UnionID 的获取&lt;/p>
+&lt;ul>
+&lt;li>存在同主体的公众号，且该用户已关注&lt;/li>
+&lt;li>存在同主体的公众号或移动应用，且该用户已授权登录&lt;/li>
+&lt;li>const { encryptedData } = wx.getUserInfo({ withCredentials : true})&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>cicd
+小程序 CLI 工具是和 IDE 一起打包安装的。而 IDE 只有 windows 和 MacOS 两个版本。所以如果想在 linux 服务器上架设 cicd，只能通过黑科技安装第三方开发工具。而且在执行上传部署命令之前，还需要通过扫码登录。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>原生组件
+脱离在 WebView 渲染流程外，一些 CSS 样式无法应用于原生组件，例如，不能在父级节点使用 overflow:hidden 来裁剪原生组件的显示区域；不能使用 transformrotate 让原生组件产生旋转等。&lt;br>
+原生组件会浮于页面其他组件之上（相当于拥有正无穷大的 z-index 值）使其它组件不能覆盖在原生组件上展示。想要解决这个问题，可以考虑使用 cover-view 和 cover-image 组件。这两个组件也是原生组件，同样是脱离 WebView 的渲染流程外，而原生组件之间的层级就可以按照一定的规则控制。&lt;/p>
+&lt;/li>
+&lt;/ul></content><category scheme="https://blog.shinetechsoftware.org/authors/zhaolei" term="zhaolei" label="zhaolei"/><category scheme="https://blog.shinetechsoftware.org/tags/MiniProgram" term="MiniProgram" label="MiniProgram"/></entry></feed>
