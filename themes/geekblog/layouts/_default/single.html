@@ -30,6 +30,8 @@
     <section class="gblog-markdown">
       {{ partial "utils/content" . }}
     </section>
-    {{ template "_internal/disqus.html" . }}
+    {{ if or (eq .Type (default "posts" .Site.Params.GeekblogContentSection)) (eq .Type "post") }}
+      {{ template "_internal/disqus.html" . }}
+    {{ end }}
   </article>
 {{ end }}
